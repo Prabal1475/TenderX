@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: tenderx_db
+    environment:
+      POSTGRES_USER: tenderx_user
+      POSTGRES_PASSWORD: tenderx_password
+      POSTGRES_DB: tenderx_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenderx_user -d tenderx_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: tenderx_backend
+    environment:
+      - DATABASE_URL=postgresql://tenderx_user:tenderx_password@db:5432/tenderx_db
+      - SECRET_KEY=change-this-to-a-secure-random-secret-key-in-production-min-32-chars
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tenderx_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

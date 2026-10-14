@@ -1,0 +1,117 @@
+[
+  {
+    "tender_id": "GEM/2026/B/8912401",
+    "title": "Supply, Installation & Maintenance of Enterprise CCTV Surveillance & AI Analytics System",
+    "authority": "Northern Railway Headquarter, Baroda House, New Delhi",
+    "portal": "GeM",
+    "category": "Works",
+    "estimated_value_inr": 35000000.0,
+    "emd_amount_inr": 700000.0,
+    "msme_exemption": true,
+    "startup_exemption": true,
+    "submission_deadline": "2026-11-20T15:00:00Z",
+    "opening_date": "2026-11-20T15:30:00Z",
+    "location_state": "Delhi",
+    "description": "Turnkey implementation of high-definition IP cameras, NVRs, optical fiber backbone cabling, server infrastructure with facial recognition and crowd density AI analytics across 18 railway stations under Delhi Division.",
+    "document_url": "https://gem.gov.in/tenders/GEM-2026-B-8912401.pdf",
+    "eligibility_criteria": {
+      "min_turnover_cr": 4.5,
+      "min_experience_years": 3,
+      "required_certifications": ["ISO 9001:2015", "ISO 27001:2022"],
+      "past_project_value_pct": 50
+    },
+    "status": "Active"
+  },
+  {
+    "tender_id": "CPPP/2026/AIIMS/IT/042",
+    "title": "Hospital Information Management System (HMIS) & Cloud Infrastructure Operations AMC",
+    "authority": "All India Institute of Medical Sciences (AIIMS), New Delhi",
+    "portal": "CPPP",
+    "category": "Services",
+    "estimated_value_inr": 28000000.0,
+    "emd_amount_inr": 560000.0,
+    "msme_exemption": true,
+    "startup_exemption": false,
+    "submission_deadline": "2026-11-15T14:00:00Z",
+    "opening_date": "2026-11-16T11:00:00Z",
+    "location_state": "Delhi",
+    "description": "Comprehensive 3-year operations, maintenance, cybersecurity hardening, and level-3 application support for AIIMS Integrated Healthcare Information System and PACS cloud infrastructure.",
+    "document_url": "https://eprocure.gov.in/eprocure/app?page=FrontEndTenderDetails&aiims_hmis_042",
+    "eligibility_criteria": {
+      "min_turnover_cr": 3.0,
+      "min_experience_years": 4,
+      "required_certifications": ["CMMI Level 3", "ISO 27001:2022", "ISO 20000-1"],
+      "past_project_value_pct": 40
+    },
+    "status": "Active"
+  },
+  {
+    "tender_id": "GEM/2026/B/9140221",
+    "title": "Smart City IoT Environmental Sensor Network & Central Command Center Integration",
+    "authority": "Jaipur Smart City Limited (JSCL), Rajasthan",
+    "portal": "GeM",
+    "category": "Works",
+    "estimated_value_inr": 52000000.0,
+    "emd_amount_inr": 1040000.0,
+    "msme_exemption": true,
+    "startup_exemption": true,
+    "submission_deadline": "2026-11-28T17:00:00Z",
+    "opening_date": "2026-11-29T11:00:00Z",
+    "location_state": "Rajasthan",
+    "description": "Deployment of 120 air quality, noise, and weather IoT sensor nodes with LoRaWAN wireless gateways, cloud telemetry processing, and integration with the Jaipur Integrated Command and Control Centre (ICCC).",
+    "document_url": "https://gem.gov.in/tenders/GEM-2026-B-9140221.pdf",
+    "eligibility_criteria": {
+      "min_turnover_cr": 7.0,
+      "min_experience_years": 5,
+      "required_certifications": ["ISO 9001:2015", "CE Certification", "RoHS"],
+      "past_project_value_pct": 50
+    },
+    "status": "Active"
+  },
+  {
+    "tender_id": "CPPP/2026/NHAI/TOLL/889",
+    "title": "Electronic Toll Collection (ETC / FASTag) Automatic Number Plate Recognition Upgrade",
+    "authority": "National Highways Authority of India (NHAI), New Delhi",
+    "portal": "CPPP",
+    "category": "Works",
+    "estimated_value_inr": 85000000.0,
+    "emd_amount_inr": 1700000.0,
+    "msme_exemption": false,
+    "startup_exemption": false,
+    "submission_deadline": "2026-12-05T12:00:00Z",
+    "opening_date": "2026-12-06T15:00:00Z",
+    "location_state": "Haryana",
+    "description": "Upgrade of 42 toll lanes along Eastern Peripheral Expressway with high-speed ANPR AI cameras, optical sensors, automatic boom barriers, and real-time bank reconciliation gateway.",
+    "document_url": "https://eprocure.gov.in/eprocure/app?nhai_toll_889",
+    "eligibility_criteria": {
+      "min_turnover_cr": 15.0,
+      "min_experience_years": 7,
+      "required_certifications": ["ISO 9001:2015", "ISO 27001:2022"],
+      "past_project_value_pct": 60
+    },
+    "status": "Active"
+  },
+  {
+    "tender_id": "GEM/2026/B/8771203",
+    "title": "Supply & Installation of Tier-3 Data Center High-Density Rack Servers and SAN Storage",
+    "authority": "Bharat Sanchar Nigam Limited (BSNL) Corporate Office",
+    "portal": "GeM",
+    "category": "Goods",
+    "estimated_value_inr": 42000000.0,
+    "emd_amount_inr": 840000.0,
+    "msme_exemption": true,
+    "startup_exemption": true,
+    "submission_deadline": "2026-11-10T16:00:00Z",
+    "opening_date": "2026-11-10T16:30:00Z",
+    "location_state": "Delhi",
+    "description": "Supply, installation, multi-site clustering, and 5-year OEM warranty for 32 dual-socket Xeon rackmount servers, 200TB NVMe all-flash SAN storage, and 40GbE ToR data center switches.",
+    "document_url": "https://gem.gov.in/tenders/GEM-2026-B-8771203.pdf",
+    "eligibility_criteria": {
+      "min_turnover_cr": 6.0,
+      "min_experience_years": 3,
+      "required_certifications": ["ISO 9001:2015", "OEM Authorization (MAF)"],
+      "past_project_value_pct": 50
+    },
+    "status": "Active"
+  }
+]

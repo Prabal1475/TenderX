@@ -1,0 +1,23 @@
+{
+  "name": "tenderx-workspace",
+  "version": "1.0.0",
+  "description": "AI-Powered Tender Management Platform for Indian Procurement (GeM & CPPP)",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "keywords": [
+    "tender",
+    "gem",
+    "cppp",
+    "ai",
+    "rag",
+    "fastapi",
+    "react",
+    "tailwind"
+  ],
+  "author": "TenderX Team",
+  "license": "MIT"
+}
