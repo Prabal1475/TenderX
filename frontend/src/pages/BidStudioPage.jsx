@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   FileEdit,
   Sparkles,
@@ -10,9 +10,15 @@ import {
   FileCheck,
   ChevronRight,
   BookOpen,
+  Printer,
+  Copy,
+  X,
+  FileText,
+  Building,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../api/client';
+import { useDemo } from '../demo/DemoContext';
 
 const TEMPLATES = [
   { id: 'Compliance_Matrix', label: 'Technical Compliance Matrix', desc: 'Clause-by-clause compliance table format' },
@@ -22,6 +28,7 @@ const TEMPLATES = [
 ];
 
 export default function BidStudioPage({ initialTenderId }) {
+  const { isDemoMode, getActiveTender } = useDemo();
   const [tenders, setTenders] = useState([]);
   const [selectedTenderId, setSelectedTenderId] = useState(initialTenderId || '');
   const [template, setTemplate] = useState('Compliance_Matrix');
@@ -31,6 +38,8 @@ export default function BidStudioPage({ initialTenderId }) {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedText, setEditedText] = useState('');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const streamIntervalRef = useRef(null);
 
   useEffect(() => {
     const init = async () => {
@@ -38,14 +47,24 @@ export default function BidStudioPage({ initialTenderId }) {
         const tList = await api.listTenders();
         setTenders(tList);
         if (!selectedTenderId && tList.length > 0) {
-          setSelectedTenderId(tList[0].id);
+          if (isDemoMode) {
+            const demoT = getActiveTender();
+            const match = tList.find((t) => t.id === demoT.id || t.tender_id === demoT.tender_id);
+            setSelectedTenderId(match ? match.id : tList[0].id);
+          } else {
+            setSelectedTenderId(tList[0].id);
+          }
         }
       } catch (err) {
         console.error(err);
       }
     };
     init();
-  }, []);
+
+    return () => {
+      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
+    };
+  }, [isDemoMode]);
 
   const loadDraftsForTender = async (tId) => {
     if (!tId) return;
@@ -77,25 +96,37 @@ export default function BidStudioPage({ initialTenderId }) {
   const handleGenerate = async () => {
     if (!selectedTenderId) return;
     setGenerating(true);
-    const genPromise = api
-      .generateBidDocument(selectedTenderId, template, customInstructions)
-      .then((newDraft) => {
-        setDrafts((prev) => [newDraft, ...prev]);
-        selectDraft(newDraft);
-        return newDraft;
-      });
-
-    toast.promise(genPromise, {
-      loading: 'RAG Engine synthesizing proposal from credentials...',
-      success: 'AI proposal draft created successfully!',
-      error: (err) => `Generation failed: ${err.message}`,
-    });
 
     try {
-      await genPromise;
-    } catch {
-      // Handled by toast
-    } finally {
+      toast.loading('RAG Engine querying Document Vault & synthesizing proposal...', { id: 'rag-gen' });
+      const newDraft = await api.generateBidDocument(selectedTenderId, template, customInstructions);
+      toast.dismiss('rag-gen');
+
+      // Fast streaming animation in demo mode or standard presentation
+      const fullContent = newDraft.edited_content || newDraft.drafted_content;
+      setDrafts((prev) => [newDraft, ...prev.filter((d) => d.id !== newDraft.id)]);
+      setActiveDraft(newDraft);
+
+      let currentPos = 0;
+      const chunkSize = Math.max(35, Math.floor(fullContent.length / 20));
+      setEditedText('');
+
+      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
+
+      streamIntervalRef.current = setInterval(() => {
+        currentPos += chunkSize;
+        if (currentPos >= fullContent.length) {
+          clearInterval(streamIntervalRef.current);
+          setEditedText(fullContent);
+          setGenerating(false);
+          toast.success('AI proposal draft synthesized with citations!');
+        } else {
+          setEditedText(fullContent.slice(0, currentPos));
+        }
+      }, 45);
+    } catch (err) {
+      toast.dismiss('rag-gen');
+      toast.error(`Generation failed: ${err.message}`);
       setGenerating(false);
     }
   };
@@ -135,10 +166,15 @@ export default function BidStudioPage({ initialTenderId }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeDraft.title.replace(/\s+/g, '_')}.md`;
+    a.download = `${(activeDraft.title || 'bid_proposal').replace(/\s+/g, '_')}.md`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Downloaded proposal as Markdown');
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(editedText);
+    toast.success('Proposal copied to clipboard!');
   };
 
   const selectedTender = tenders.find((t) => t.id === selectedTenderId);
@@ -146,27 +182,41 @@ export default function BidStudioPage({ initialTenderId }) {
   return (
     <div className="space-y-6 animate-cascade">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black tracking-tight text-white">
-          Bid Document Studio & RAG Proposal Generator
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Synthesize technical compliance matrices and tender proposals from company credentials with human-in-the-loop review
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+            Bid Document Studio & RAG Proposal Generator
+          </h1>
+          <p className="text-xs text-slate-600 mt-1">
+            Synthesize clause-by-clause compliance statements and tender bids grounded in company credential vault
+          </p>
+        </div>
+
+        {activeDraft && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20"
+            >
+              <Printer className="w-4 h-4 stroke-[2.5]" />
+              <span>Export Official Bid Package</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tender & Generator Control Bar */}
-      <div className="glass-panel p-5 rounded-3xl space-y-4">
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Tender Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Target Indian Tender
             </label>
             <select
               value={selectedTenderId}
               onChange={(e) => setSelectedTenderId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 font-medium"
+              className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 font-medium"
             >
               {tenders.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -178,13 +228,13 @@ export default function BidStudioPage({ initialTenderId }) {
 
           {/* Template Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Bid Template Type
             </label>
             <select
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 font-medium"
+              className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 font-medium"
             >
               {TEMPLATES.map((tmpl) => (
                 <option key={tmpl.id} value={tmpl.id}>
@@ -194,26 +244,26 @@ export default function BidStudioPage({ initialTenderId }) {
             </select>
           </div>
 
-          {/* Custom Instruction & Generate Action */}
+          {/* Custom Instruction */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Custom Directives (Optional)
             </label>
             <input
               type="text"
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
-              placeholder="e.g. Highlight ISO 27001, Make-in-India Class-1 supplier..."
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-teal-500 transition-colors"
+              placeholder="e.g. Cite ISO 27001, GFR 170 EMD exemption, Class-1 supplier..."
+              className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-teal-600 transition-colors"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-          <span className="text-xs text-slate-400">
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <span className="text-xs text-slate-500">
             {selectedTender ? (
               <span>
-                Authority: <strong className="text-slate-200">{selectedTender.authority}</strong>
+                Procuring Authority: <strong className="text-slate-800">{selectedTender.authority}</strong>
               </span>
             ) : null}
           </span>
@@ -221,10 +271,10 @@ export default function BidStudioPage({ initialTenderId }) {
           <button
             onClick={handleGenerate}
             disabled={generating || !selectedTenderId}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 btn-tactile active:scale-[0.97] shadow-lg shadow-teal-500/20 disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20 disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4 stroke-[2.5]" />
-            <span>{generating ? 'RAG Engine Synthesizing...' : 'Generate AI Proposal Draft'}</span>
+            <Sparkles className={`w-4 h-4 stroke-[2.5] ${generating ? 'animate-spin' : ''}`} />
+            <span>{generating ? 'RAG Synthesizing Proposal...' : 'Generate AI Proposal Draft'}</span>
           </button>
         </div>
       </div>
@@ -232,7 +282,7 @@ export default function BidStudioPage({ initialTenderId }) {
       {/* Editor & Revision Reviewer Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Drawer: Draft Versions List */}
-        <div className="lg:col-span-1 glass-panel p-4 rounded-3xl space-y-3">
+        <div className="lg:col-span-1 bg-white p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             Draft Versions ({drafts.length})
           </h2>
@@ -247,21 +297,21 @@ export default function BidStudioPage({ initialTenderId }) {
                 <div
                   key={d.id}
                   onClick={() => selectDraft(d)}
-                  className={`p-3 rounded-2xl cursor-pointer border text-xs btn-tactile active:scale-[0.98] ${
+                  className={`p-3 rounded-2xl cursor-pointer border text-xs btn-tactile active:scale-[0.98] transition-all ${
                     activeDraft?.id === d.id
-                      ? 'bg-teal-500/10 border-teal-500/40 text-teal-300'
-                      : 'border-slate-800 hover:bg-slate-900/60 text-slate-400'
+                      ? 'bg-teal-50 border-teal-300 text-teal-800'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-slate-200">{d.doc_type.replace('_', ' ')}</span>
+                    <span className="font-bold text-slate-800">{d.doc_type.replace('_', ' ')}</span>
                     <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
                         d.status === 'Approved'
-                          ? 'bg-emerald-500/20 text-emerald-300'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : d.status === 'Under_Review'
-                          ? 'bg-amber-500/20 text-amber-300'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
                       }`}
                     >
                       {d.status}
@@ -277,19 +327,19 @@ export default function BidStudioPage({ initialTenderId }) {
         </div>
 
         {/* Right Area: Split-Screen Markdown Editor & Preview */}
-        <div className="lg:col-span-3 glass-panel p-5 rounded-3xl space-y-4">
+        <div className="lg:col-span-3 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
           {activeDraft ? (
             <>
               {/* Draft Header & Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
-                  <h2 className="text-sm font-bold text-white">{activeDraft.title}</h2>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+                  <h2 className="text-sm font-bold text-slate-900">{activeDraft.title}</h2>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
                     <span>Status:</span>
                     <select
                       value={activeDraft.status}
                       onChange={(e) => handleSave(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-teal-300 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none"
+                      className="bg-slate-50 border border-slate-300 text-teal-800 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none"
                     >
                       <option value="Draft">Draft</option>
                       <option value="Under_Review">Under Review</option>
@@ -301,9 +351,17 @@ export default function BidStudioPage({ initialTenderId }) {
 
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs btn-tactile active:scale-[0.97]"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </button>
+
+                  <button
                     onClick={() => handleSave()}
                     disabled={saving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 btn-tactile active:scale-[0.97]"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs btn-tactile active:scale-[0.97]"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{saving ? 'Saving...' : 'Save Draft'}</span>
@@ -311,7 +369,7 @@ export default function BidStudioPage({ initialTenderId }) {
 
                   <button
                     onClick={handleDownload}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 btn-tactile active:scale-[0.97]"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Export .MD</span>
@@ -321,17 +379,19 @@ export default function BidStudioPage({ initialTenderId }) {
 
               {/* RAG Context Citations Banner */}
               {activeDraft.rag_citations?.length > 0 && (
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] space-y-1">
-                  <span className="font-semibold text-teal-400 flex items-center gap-1">
-                    <BookOpen className="w-3.5 h-3.5" /> Referenced Vault Documents (RAG Citations):
+                <div className="p-3 rounded-2xl bg-teal-50 border border-teal-200 text-xs space-y-1.5">
+                  <span className="font-bold text-teal-800 flex items-center gap-1.5 text-xs">
+                    <BookOpen className="w-4 h-4 text-teal-600" />
+                    Grounding Proof (RAG Citations from Document Vault):
                   </span>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="flex flex-wrap gap-2 pt-1">
                     {activeDraft.rag_citations.map((cite, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700"
+                        className="px-2.5 py-1 rounded-lg bg-white text-teal-800 font-mono text-[11px] border border-teal-200 shadow-xs flex items-center gap-1.5"
                       >
-                        {cite.document_name} ({cite.category})
+                        <FileCheck className="w-3 h-3 text-emerald-600" />
+                        {cite.document_name}
                       </span>
                     ))}
                   </div>
@@ -341,31 +401,127 @@ export default function BidStudioPage({ initialTenderId }) {
               {/* Dual-Pane Editor & Markdown Viewer */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[11px] font-bold text-slate-400 mb-1">Human-in-the-Loop Editor (Markdown)</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Human-in-the-Loop Editor
+                    </p>
+                    <span className="text-[10px] text-slate-500 font-mono">{editedText.length} characters</span>
+                  </div>
                   <textarea
                     value={editedText}
                     onChange={(e) => setEditedText(e.target.value)}
                     rows={18}
-                    className="w-full p-4 bg-slate-900/90 border border-slate-800 rounded-2xl text-xs text-slate-100 font-mono focus:outline-none focus:border-teal-500 leading-relaxed resize-none"
+                    className="w-full p-4 bg-slate-50/70 border border-slate-300 rounded-2xl text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/20 leading-relaxed resize-none"
                     placeholder="Proposal content..."
                   />
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-bold text-slate-400 mb-1">Formatted Document Preview</p>
-                  <div className="h-[370px] overflow-y-auto p-4 bg-slate-900/40 border border-slate-800 rounded-2xl text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Live Formatted Preview
+                  </p>
+                  <div className="h-[390px] overflow-y-auto p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 leading-relaxed whitespace-pre-line font-sans select-text">
                     {editedText}
                   </div>
                 </div>
               </div>
             </>
           ) : (
-            <div className="text-center py-24 text-slate-500 text-sm">
+            <div className="text-center py-24 text-slate-400 text-sm">
               Select or generate a proposal draft to begin review.
             </div>
           )}
         </div>
       </div>
+
+      {/* Export Official Bid Package Modal (Print / PDF) */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden border border-slate-200 shadow-2xl">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-teal-600" />
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Official Government Bid Submission Package</h3>
+                  <p className="text-[11px] text-slate-500">Formatted per GeM / CPPP GFR 2017 Submission Standards</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-600 text-white hover:bg-teal-700 shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Print / Save as PDF</span>
+                </button>
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Printable Content */}
+            <div className="p-6 sm:p-8 overflow-y-auto bg-white text-slate-900 font-serif leading-relaxed text-xs">
+              {/* Official Letterhead */}
+              <div className="border-b-2 border-slate-900 pb-4 mb-6 text-center">
+                <h2 className="text-lg font-black tracking-wide uppercase text-slate-950 font-sans">
+                  Apex Enterprise Solutions Pvt Ltd
+                </h2>
+                <p className="text-[11px] text-slate-600 font-sans mt-0.5">
+                  Regd Office: 402, Technology Tower, Okhla Industrial Area Phase-III, New Delhi - 110020
+                </p>
+                <div className="flex justify-center gap-4 text-[10px] text-slate-500 font-mono mt-1">
+                  <span>CIN: U72200DL2018PTC334455</span>
+                  <span>|</span>
+                  <span>GSTIN: 07AAACA9876K1Z9</span>
+                  <span>|</span>
+                  <span>PAN: AAACA9876K</span>
+                  <span>|</span>
+                  <span>Udyam: UDYAM-DL-01-0098765</span>
+                </div>
+              </div>
+
+              {/* Reference Header */}
+              <div className="flex justify-between items-start mb-6 text-[11px] font-sans">
+                <div>
+                  <p><strong>Bid Ref No:</strong> AES/TENDER/2026/089</p>
+                  <p><strong>Target Tender:</strong> {selectedTender?.tender_id || 'GEM/2026/B/8912401'}</p>
+                  <p><strong>Procuring Entity:</strong> {selectedTender?.authority || 'Northern Railway Headquarter, Baroda House'}</p>
+                </div>
+                <div className="text-right">
+                  <p><strong>Date:</strong> {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  <p><strong>Submission Portal:</strong> {selectedTender?.portal || 'GeM (Government e-Marketplace)'}</p>
+                  <p><strong>Classification:</strong> Class-I Local Supplier (MII)</p>
+                </div>
+              </div>
+
+              {/* Bid Content */}
+              <div className="space-y-4 whitespace-pre-line text-xs font-sans text-slate-800 leading-relaxed border-t border-b border-slate-200 py-6">
+                {editedText}
+              </div>
+
+              {/* Official Seal & Signature */}
+              <div className="mt-8 pt-4 flex justify-between items-end font-sans">
+                <div className="text-[10px] text-slate-500">
+                  <p>Digitally Signed & Certified</p>
+                  <p>Verified through TenderX AI Qualification Engine</p>
+                </div>
+
+                <div className="text-right">
+                  <div className="inline-block border-b border-slate-400 w-44 mb-2" />
+                  <p className="font-bold text-xs text-slate-900">Authorized Signatory</p>
+                  <p className="text-[10px] text-slate-600">For Apex Enterprise Solutions Pvt Ltd</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

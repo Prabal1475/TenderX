@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Toaster } from 'sonner';
 import Navbar from './components/common/Navbar';
 import Sidebar from './components/common/Sidebar';
+import DemoWalkthroughBar from './components/common/DemoWalkthroughBar';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import TenderDiscoveryPage from './pages/TenderDiscoveryPage';
@@ -11,8 +12,10 @@ import BidStudioPage from './pages/BidStudioPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import TaskTrackerPage from './pages/TaskTrackerPage';
 import { getAuthToken, setAuthToken, api } from './api/client';
+import { useDemo } from './demo/DemoContext';
 
 export default function App() {
+  const { isDemoMode, demoUser } = useDemo();
   const [token, setToken] = useState(getAuthToken());
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -29,14 +32,18 @@ export default function App() {
 
   useEffect(() => {
     if (token) {
-      api.getMe()
-        .then(setCurrentUser)
-        .catch(() => {
-          setAuthToken(null);
-          setToken(null);
-        });
+      if (isDemoMode) {
+        setCurrentUser(demoUser);
+      } else {
+        api.getMe()
+          .then(setCurrentUser)
+          .catch(() => {
+            setAuthToken(null);
+            setToken(null);
+          });
+      }
     }
-  }, [token]);
+  }, [token, isDemoMode]);
 
   const handleLogout = () => {
     setAuthToken(null);
@@ -64,17 +71,18 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       <Toaster
         position="bottom-right"
-        theme="dark"
+        theme="light"
         richColors
         closeButton
         toastOptions={{
           style: {
-            background: 'rgba(15, 23, 42, 0.95)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: '#ffffff',
+            border: '1px solid rgba(226, 232, 240, 1)',
+            color: '#0f172a',
+            boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04)',
             fontFamily: "'Plus Jakarta Sans', sans-serif",
           },
         }}
@@ -90,7 +98,13 @@ export default function App() {
           }}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          {/* Pitch Walkthrough Bar */}
+          <DemoWalkthroughBar
+            onNavigateTab={setActiveTab}
+            onSelectTender={navigateToTenderDetail}
+          />
+
           <div key={activeTab} className="animate-view-fade">
             {activeTab === 'dashboard' && (
               <DashboardPage

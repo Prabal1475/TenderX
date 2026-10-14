@@ -104,7 +104,7 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 btn-tactile active:scale-[0.97]"
+          className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 btn-tactile active:scale-[0.97]"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Tenders</span>
@@ -112,7 +112,7 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
 
         <button
           onClick={() => onOpenStudio(tender.id)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 btn-tactile active:scale-[0.97] shadow-lg shadow-teal-500/20"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20"
         >
           <FileEdit className="w-4 h-4" />
           <span>Open Bid Document Studio</span>
@@ -120,41 +120,41 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
       </div>
 
       {/* Tender Header Banner */}
-      <div className="glass-panel p-6 rounded-3xl space-y-4">
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/30">
+          <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
             {tender.portal}
           </span>
-          <span className="text-xs font-mono text-slate-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+          <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
             {tender.tender_id}
           </span>
-          <span className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300">
+          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
             {tender.category}
           </span>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300">
+          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
             {tender.location_state || 'All India'}
           </span>
         </div>
 
-        <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
+        <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
           {tender.title}
         </h1>
 
-        <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-slate-400 pt-2 border-t border-slate-800">
+        <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-slate-500 pt-2 border-t border-slate-100">
           <span className="flex items-center gap-1.5">
-            <Building className="w-4 h-4 text-slate-500" />
-            <strong className="text-slate-200">Authority:</strong> {tender.authority}
+            <Building className="w-4 h-4 text-slate-400" />
+            <strong className="text-slate-700 font-semibold">Authority:</strong> {tender.authority}
           </span>
           <span className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <strong className="text-slate-200">Deadline:</strong> {formatDate(tender.submission_deadline)}
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <strong className="text-slate-700 font-semibold">Deadline:</strong> {formatDate(tender.submission_deadline)}
           </span>
           {tender.document_url && (
             <a
               href={tender.document_url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 text-teal-400 hover:underline"
+              className="flex items-center gap-1 text-teal-700 font-semibold hover:text-teal-900 hover:underline"
             >
               <span>Official Notice PDF</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -165,20 +165,36 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
 
       {/* AI Qualification & Match Breakdown */}
       {matchScore && (
-        <div className="glass-panel p-6 rounded-3xl border border-teal-500/30 space-y-6">
+        <div
+          className={`bg-white p-6 rounded-3xl border shadow-sm space-y-6 ${
+            matchScore.overall_match_score >= 70 ? 'border-teal-200' : 'border-rose-200'
+          }`}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center font-extrabold text-lg text-slate-950 shadow-lg shadow-teal-500/20">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg text-white shadow-md ${
+                  matchScore.overall_match_score >= 70
+                    ? 'bg-gradient-to-tr from-teal-600 to-emerald-500 shadow-teal-700/20'
+                    : 'bg-gradient-to-tr from-rose-600 to-amber-500 shadow-rose-700/20'
+                }`}
+              >
                 {matchScore.overall_match_score}%
               </div>
               <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <span>AI Qualification & Match Engine</span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300">
-                    Hybrid Score
+                  <span
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      matchScore.overall_match_score >= 70
+                        ? 'bg-teal-50 text-teal-800 border-teal-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                    }`}
+                  >
+                    {matchScore.overall_match_score >= 70 ? 'High Fit (Recommended)' : 'Critical Disqualification Alert'}
                   </span>
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Calculated against your company profile using hard eligibility rules + pgvector cosine similarity
                 </p>
               </div>
@@ -187,16 +203,16 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
             <button
               onClick={handleReEvaluate}
               disabled={evaluating}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 btn-tactile active:scale-[0.97]"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs btn-tactile active:scale-[0.97]"
             >
               {evaluating ? 'Re-calculating...' : 'Re-run Evaluation'}
             </button>
           </div>
 
           {/* AI Rationale Summary */}
-          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300 leading-relaxed">
-            <p className="font-semibold text-teal-400 mb-1 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> AI Executive Rationale:
+          <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-100 text-xs text-slate-700 leading-relaxed">
+            <p className="font-bold text-teal-800 mb-1 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-teal-600" /> AI Executive Rationale:
             </p>
             {matchScore.ai_rationale}
           </div>
@@ -204,53 +220,53 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
           {/* Eligibility Matrix Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             {/* Turnover Check */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-300">Financial Turnover Gate</span>
+                <span className="font-bold text-slate-800">Financial Turnover Gate</span>
                 {matchScore.turnover_check?.passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : (
-                  <XCircle className="w-4 h-4 text-rose-400" />
+                  <XCircle className="w-4 h-4 text-rose-600" />
                 )}
               </div>
-              <p className="text-slate-400 text-[11px]">
-                Required: <strong className="text-slate-200">₹{matchScore.turnover_check?.required_cr} Cr</strong> vs
-                Your: <strong className="text-slate-200">₹{matchScore.turnover_check?.company_cr} Cr</strong>
+              <p className="text-slate-600 text-[11px]">
+                Required: <strong className="text-slate-900 font-bold">₹{matchScore.turnover_check?.required_cr} Cr</strong> vs
+                Your: <strong className="text-slate-900 font-bold">₹{matchScore.turnover_check?.company_cr} Cr</strong>
               </p>
               {matchScore.turnover_check?.relaxed_via_msme && (
-                <span className="inline-block text-[10px] text-teal-400 font-semibold">
+                <span className="inline-block text-[10px] text-teal-700 font-bold">
                   ✓ Qualified under MSME 50% relaxation
                 </span>
               )}
             </div>
 
             {/* Past Experience Check */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-300">Experience Track Record</span>
+                <span className="font-bold text-slate-800">Experience Track Record</span>
                 {matchScore.experience_check?.passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 ) : (
-                  <XCircle className="w-4 h-4 text-rose-400" />
+                  <XCircle className="w-4 h-4 text-rose-600" />
                 )}
               </div>
-              <p className="text-slate-400 text-[11px]">
-                Required: <strong className="text-slate-200">{matchScore.experience_check?.required_years} Years</strong> vs
-                Your: <strong className="text-slate-200">{matchScore.experience_check?.company_years} Years</strong>
+              <p className="text-slate-600 text-[11px]">
+                Required: <strong className="text-slate-900 font-bold">{matchScore.experience_check?.required_years} Years</strong> vs
+                Your: <strong className="text-slate-900 font-bold">{matchScore.experience_check?.company_years} Years</strong>
               </p>
-              <span className="text-[10px] text-slate-500">Based on registration and contracts</span>
+              <span className="text-[10px] text-slate-500 font-medium">Based on registration and contracts</span>
             </div>
 
             {/* MSME Exemption Benefit */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-300">MSME EMD Exemption</span>
-                <span className="text-emerald-400 font-bold">Waiver Applied</span>
+                <span className="font-bold text-slate-800">MSME EMD Exemption</span>
+                <span className="text-emerald-700 font-bold">Waiver Applied</span>
               </div>
-              <p className="text-slate-400 text-[11px]">
-                EMD Saved: <strong className="text-emerald-400">{formatINR(matchScore.msme_benefit?.emd_amount_saved_inr)}</strong>
+              <p className="text-slate-600 text-[11px]">
+                EMD Saved: <strong className="text-emerald-700 font-bold">{formatINR(matchScore.msme_benefit?.emd_amount_saved_inr)}</strong>
               </p>
-              <span className="text-[10px] text-teal-400 font-semibold">
+              <span className="text-[10px] text-teal-700 font-bold">
                 No bank guarantee / FDR required upfront
               </span>
             </div>
@@ -258,12 +274,12 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
 
           {/* Risk Factors Alert */}
           {matchScore.risk_factors?.length > 0 && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 space-y-1">
-              <div className="flex items-center gap-2 font-bold mb-1">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
+              <div className="flex items-center gap-2 font-bold mb-1 text-amber-800">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
                 <span>Qualification Risks Identified:</span>
               </div>
-              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-200/90 pl-1">
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-900 pl-1">
                 {matchScore.risk_factors.map((risk, idx) => (
                   <li key={idx}>{risk}</li>
                 ))}
@@ -274,9 +290,9 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
       )}
 
       {/* Scope of Work Section */}
-      <div className="glass-panel p-6 rounded-3xl space-y-4">
-        <h2 className="text-base font-bold text-white">Scope of Work & Technical Description</h2>
-        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 text-sm text-slate-300 leading-relaxed whitespace-pre-line font-mono text-xs">
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+        <h2 className="text-base font-bold text-slate-900">Scope of Work & Technical Description</h2>
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 leading-relaxed whitespace-pre-line font-mono text-xs">
           {tender.description || 'No detailed scope text available.'}
         </div>
       </div>

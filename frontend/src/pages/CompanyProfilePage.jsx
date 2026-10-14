@@ -103,46 +103,46 @@ export default function CompanyProfilePage() {
     <div className="max-w-4xl space-y-6 animate-cascade">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
             Company Qualification Profile
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             Indian statutory details, turnover credentials, and core competencies used by the AI Matching and RAG Engine
           </p>
         </div>
 
         {savedSuccess && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold animate-cascade">
-            <CheckCircle className="w-4 h-4" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold animate-cascade">
+            <CheckCircle className="w-4 h-4 text-emerald-600" />
             <span>Profile & Embeddings Updated!</span>
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="glass-panel p-6 rounded-3xl space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-6">
         {/* Statutory Identifiers */}
         <div>
-          <h2 className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4" /> Statutory Registration & Tax IDs
+          <h2 className="text-xs font-bold text-teal-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-teal-600" /> Statutory Registration & Tax IDs
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Company Legal Name</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Company Legal Name</label>
               <input
                 type="text"
                 required
                 value={profile.company_name}
                 onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 transition-colors"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">MSME Classification</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">MSME Classification</label>
               <select
                 value={profile.is_msme || 'Micro'}
                 onChange={(e) => setProfile({ ...profile, is_msme: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               >
                 <option value="Micro">Micro Enterprise</option>
                 <option value="Small">Small Enterprise</option>
@@ -152,48 +152,48 @@ export default function CompanyProfilePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">PAN Number</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">PAN Number</label>
               <input
                 type="text"
                 value={profile.pan_number || ''}
                 onChange={(e) => setProfile({ ...profile, pan_number: e.target.value })}
                 placeholder="AAACR1234F"
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 transition-colors"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">GSTIN Number</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">GSTIN Number</label>
               <input
                 type="text"
                 value={profile.gst_number || ''}
                 onChange={(e) => setProfile({ ...profile, gst_number: e.target.value })}
                 placeholder="07AAAAA0000A1Z5"
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 transition-colors"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Udyam MSME Registration</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Udyam MSME Registration</label>
               <input
                 type="text"
                 value={profile.udyam_msme_number || ''}
                 onChange={(e) => setProfile({ ...profile, udyam_msme_number: e.target.value })}
                 placeholder="UDYAM-DL-01-0012345"
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 transition-colors"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 transition-colors"
               />
             </div>
           </div>
         </div>
 
         {/* Financial & Track Record */}
-        <div className="pt-4 border-t border-slate-800">
-          <h2 className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <Building2 className="w-4 h-4" /> Financial Turnover & Track Record Credentials
+        <div className="pt-4 border-t border-slate-100">
+          <h2 className="text-xs font-bold text-teal-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <Building2 className="w-4 h-4 text-teal-600" /> Financial Turnover & Track Record Credentials
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Avg. Annual Turnover (₹ Crores)
               </label>
               <input
@@ -202,12 +202,12 @@ export default function CompanyProfilePage() {
                 required
                 value={profile.annual_turnover_cr}
                 onChange={(e) => setProfile({ ...profile, annual_turnover_cr: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Net Worth (₹ Crores)
               </label>
               <input
@@ -216,12 +216,12 @@ export default function CompanyProfilePage() {
                 required
                 value={profile.net_worth_cr}
                 onChange={(e) => setProfile({ ...profile, net_worth_cr: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Years of Operating Experience
               </label>
               <input
@@ -229,21 +229,21 @@ export default function CompanyProfilePage() {
                 required
                 value={profile.years_of_experience}
                 onChange={(e) => setProfile({ ...profile, years_of_experience: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               />
             </div>
           </div>
         </div>
 
         {/* Capabilities, Sectors & Narrative */}
-        <div className="pt-4 border-t border-slate-800 space-y-4">
-          <h2 className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" /> Capabilities & RAG Vector Profile
+        <div className="pt-4 border-t border-slate-100 space-y-4">
+          <h2 className="text-xs font-bold text-teal-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-teal-600" /> Capabilities & RAG Vector Profile
           </h2>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Primary Sectors / Domain Tags (Comma Separated)
               </label>
               <input
@@ -251,12 +251,12 @@ export default function CompanyProfilePage() {
                 value={sectorsStr}
                 onChange={(e) => setSectorsStr(e.target.value)}
                 placeholder="IT Infrastructure, CCTV Surveillance, Cloud Services, Solar Power"
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Certifications & Standards (Comma Separated)
               </label>
               <input
@@ -264,12 +264,12 @@ export default function CompanyProfilePage() {
                 value={certsStr}
                 onChange={(e) => setCertsStr(e.target.value)}
                 placeholder="ISO 9001:2015, ISO 27001, CMMI Level 3, BIS"
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Key PSU / Government Clients (Comma Separated)
               </label>
               <input
@@ -277,31 +277,31 @@ export default function CompanyProfilePage() {
                 value={clientsStr}
                 onChange={(e) => setClientsStr(e.target.value)}
                 placeholder="Northern Railway, AIIMS New Delhi, BSNL, IOCL"
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
                 <span>Core Technical Capabilities & Specialization Narrative</span>
-                <span className="text-[10px] text-teal-400 font-normal">Indexed into semantic vector profile</span>
+                <span className="text-[10px] text-teal-700 font-medium">Indexed into semantic vector profile</span>
               </label>
               <textarea
                 rows={4}
                 value={profile.core_competencies || ''}
                 onChange={(e) => setProfile({ ...profile, core_competencies: e.target.value })}
-                className="w-full p-3.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-teal-500 leading-relaxed"
+                className="w-full p-3.5 bg-slate-50/70 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-teal-600 leading-relaxed"
                 placeholder="Describe your engineering strengths, delivered past projects, and turnkey execution specializations..."
               />
             </div>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-800 flex justify-end">
+        <div className="pt-4 border-t border-slate-100 flex justify-end">
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 btn-tactile active:scale-[0.97] shadow-lg shadow-teal-500/20 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? 'Updating & Vectorizing...' : 'Save Profile & Re-Index AI'}</span>

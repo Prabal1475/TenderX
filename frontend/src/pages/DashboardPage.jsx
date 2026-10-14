@@ -71,10 +71,10 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
       {/* Welcome & Quick Action Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
             Procurement Command Center
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             Real-time Indian GeM & CPPP tender intelligence, qualification analysis, and bid pipeline
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
           <button
             onClick={handleQuickIngest}
             disabled={syncing}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 btn-tactile active:scale-[0.97] disabled:opacity-50"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs btn-tactile active:scale-[0.97] disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin-fast' : ''}`} />
             <span>{syncing ? 'Syncing Feeds...' : 'Sync GeM & CPPP'}</span>
@@ -91,7 +91,7 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
 
           <button
             onClick={() => onSelectTab('vault')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 btn-tactile active:scale-[0.97] shadow-lg shadow-teal-500/10"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20"
           >
             <FolderUp className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Upload Credentials</span>
@@ -114,52 +114,52 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
           ))
         ) : (
           <>
-            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade" style={{ animationDelay: '0ms' }}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade shadow-xs" style={{ animationDelay: '0ms' }}>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
                 <span>Active Tenders</span>
-                <span className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400">
+                <span className="p-1.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/60">
                   <TrendingUp className="w-4 h-4" />
                 </span>
               </div>
-              <p className="text-2xl font-extrabold text-white">{tenders.length}</p>
-              <p className="text-[11px] text-slate-400 mt-1.5">Discovered from GeM & CPPP</p>
+              <p className="text-2xl font-black text-slate-900">{tenders.length}</p>
+              <p className="text-[11px] text-slate-500 mt-1.5 font-medium">Discovered from GeM & CPPP</p>
             </div>
 
-            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade" style={{ animationDelay: '40ms' }}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade shadow-xs" style={{ animationDelay: '40ms' }}>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
                 <span>Pipeline Value</span>
-                <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                   <span className="font-bold">₹</span>
                 </span>
               </div>
-              <p className="text-2xl font-extrabold text-emerald-400">
+              <p className="text-2xl font-black text-emerald-700">
                 {formatINR(totalPipelineValue)}
               </p>
-              <p className="text-[11px] text-slate-400 mt-1.5">Cumulative bid opportunity</p>
+              <p className="text-[11px] text-slate-500 mt-1.5 font-medium">Cumulative bid opportunity</p>
             </div>
 
-            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade" style={{ animationDelay: '80ms' }}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade shadow-xs" style={{ animationDelay: '80ms' }}>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
                 <span>Upcoming Deadlines</span>
-                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                <span className="p-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/60">
                   <Clock className="w-4 h-4" />
                 </span>
               </div>
-              <p className="text-2xl font-extrabold text-amber-400">{urgentDeadlinesCount}</p>
-              <p className="text-[11px] text-slate-400 mt-1.5">Due within 10 days</p>
+              <p className="text-2xl font-black text-amber-700">{urgentDeadlinesCount}</p>
+              <p className="text-[11px] text-slate-500 mt-1.5 font-medium">Due within 10 days</p>
             </div>
 
-            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade" style={{ animationDelay: '120ms' }}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade shadow-xs" style={{ animationDelay: '120ms' }}>
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
                 <span>Top Qualification Match</span>
-                <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
+                <span className="p-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200/60">
                   <Sparkles className="w-4 h-4" />
                 </span>
               </div>
-              <p className="text-2xl font-extrabold text-purple-300">
+              <p className="text-2xl font-black text-purple-800">
                 {recommendations[0]?.overall_match_score || 88}%
               </p>
-              <p className="text-[11px] text-slate-400 mt-1.5">Turnover & scope compatible</p>
+              <p className="text-[11px] text-slate-500 mt-1.5 font-medium">Turnover & scope compatible</p>
             </div>
           </>
         )}
@@ -169,14 +169,14 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-teal-400" />
-            <h2 className="text-base font-bold text-white">
+            <Sparkles className="w-5 h-5 text-teal-600" />
+            <h2 className="text-base font-bold text-slate-900">
               AI-Recommended Opportunities For Your Profile
             </h2>
           </div>
           <button
             onClick={() => onSelectTab('tenders')}
-            className="text-xs text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1 btn-tactile active:scale-[0.97]"
+            className="text-xs text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1 btn-tactile active:scale-[0.97]"
           >
             <span>View All Tenders</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -203,35 +203,35 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
               <div
                 key={rec.tender_id}
                 onClick={() => onNavigateTender(rec.tender_id)}
-                className="glass-panel p-5 rounded-2xl border border-slate-800/80 hover:border-teal-500/40 cursor-pointer interactive-hover btn-tactile group animate-cascade"
+                className="bg-white p-5 rounded-2xl border border-slate-200/90 hover:border-teal-300 hover:shadow-md cursor-pointer interactive-hover btn-tactile group animate-cascade transition-all"
                 style={{ animationDelay: `${idx * 40}ms` }}
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-teal-400 border border-slate-700">
+                  <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                     {rec.tender_code}
                   </span>
-                  <span className="flex items-center gap-1 text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
-                    <Sparkles className="w-3 h-3 text-teal-400" />
+                  <span className="flex items-center gap-1 text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                    <Sparkles className="w-3 h-3 text-teal-600" />
                     {rec.overall_match_score}% Match
                   </span>
                 </div>
 
-                <h3 className="font-bold text-sm text-slate-100 group-hover:text-teal-300 transition-colors line-clamp-2 mb-2">
+                <h3 className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors line-clamp-2 mb-2">
                   {rec.title}
                 </h3>
 
-                <p className="text-xs text-slate-400 line-clamp-2 mb-4">
+                <p className="text-xs text-slate-600 line-clamp-2 mb-4 leading-relaxed">
                   {rec.ai_rationale}
                 </p>
 
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${rec.is_hard_eligible ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                    <span className="text-slate-300 text-[11px]">
+                    <span className={`w-2 h-2 rounded-full ${rec.is_hard_eligible ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    <span className="text-slate-600 text-[11px] font-medium">
                       {rec.is_hard_eligible ? 'Turnover & Experience Met' : 'Check Eligibility Details'}
                     </span>
                   </div>
-                  <span className="text-teal-400 text-xs font-semibold group-hover:underline flex items-center gap-0.5">
+                  <span className="text-teal-700 text-xs font-bold group-hover:underline flex items-center gap-0.5">
                     Analyze <ArrowUpRight className="w-3.5 h-3.5" />
                   </span>
                 </div>
