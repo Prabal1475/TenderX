@@ -26,6 +26,7 @@ class CompanyDocumentResponse(BaseModel):
     category: str
     title: Optional[str] = None
     summary: Optional[str] = None
+    doc_metadata: Optional[Dict[str, Any]] = None
     tags: List[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -33,6 +34,15 @@ class CompanyDocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DocumentAnalysisResponse(BaseModel):
+    document_id: UUID
+    category: str
+    title: str
+    summary: str
+    doc_metadata: Dict[str, Any]
+    tags: List[str]
 
 
 class SemanticSearchRequest(BaseModel):

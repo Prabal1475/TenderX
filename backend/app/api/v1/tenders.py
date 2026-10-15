@@ -2,15 +2,17 @@ from typing import Any, List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, cast, String
 from ...core.database import get_db
 from ...models.user import User
+from ...models.company import CompanyProfile
 from ...models.tender import Tender
 from ...schemas.tender import TenderResponse, TenderCreate, TenderUpdate
 from ...services.ingestion.gem_adapter import gem_adapter
 from ...services.ingestion.cppp_adapter import cppp_adapter
 from ...services.ingestion.bulk_importer import bulk_importer
 from ...services.ai.embeddings import embedding_service
+from ...services.ai.matcher import tender_matcher
 from ..deps import get_current_user
 from ...core.logging import logger
 
@@ -26,11 +28,12 @@ def list_tenders(
     portal: Optional[str] = Query(None, description="Filter by portal: GeM or CPPP"),
     category: Optional[str] = Query(None, description="Filter by Goods, Services, Works"),
     status: Optional[str] = Query(None, description="Filter by pipeline status"),
+    eligibility: Optional[str] = Query(None, description="Filter by eligibility: eligible, ineligible, msme"),
     min_value: Optional[float] = Query(None, description="Minimum estimated value in INR"),
     max_value: Optional[float] = Query(None, description="Maximum estimated value in INR"),
-    search: Optional[str] = Query(None, description="Keyword search in title, authority, or description"),
+    search: Optional[str] = Query(None, description="Keyword search in title, name, type, authority, eligibility, or description"),
 ) -> Any:
-    """List and filter Indian government tenders."""
+    """List and filter Indian government tenders by title, type, authority, eligibility, etc."""
     query = db.query(Tender)
 
     if portal:
@@ -39,22 +42,47 @@ def list_tenders(
         query = query.filter(Tender.category.ilike(f"%{category}%"))
     if status:
         query = query.filter(Tender.status == status)
+    if eligibility == "msme":
+        query = query.filter(or_(Tender.msme_exemption == True, Tender.startup_exemption == True))
     if min_value is not None:
         query = query.filter(Tender.estimated_value_inr >= min_value)
     if max_value is not None:
         query = query.filter(Tender.estimated_value_inr <= max_value)
     if search:
-        search_fmt = f"%{search}%"
-        query = query.filter(
-            or_(
-                Tender.title.ilike(search_fmt),
-                Tender.authority.ilike(search_fmt),
-                Tender.tender_id.ilike(search_fmt),
-                Tender.description.ilike(search_fmt),
-            )
-        )
+        search_fmt = f"%{search.strip()}%"
+        s_lower = search.strip().lower()
+        search_conditions = [
+            Tender.title.ilike(search_fmt),
+            Tender.authority.ilike(search_fmt),
+            Tender.tender_id.ilike(search_fmt),
+            Tender.category.ilike(search_fmt),
+            Tender.description.ilike(search_fmt),
+            Tender.location_state.ilike(search_fmt),
+            cast(Tender.eligibility_criteria, String).ilike(search_fmt),
+        ]
+        if any(term in s_lower for term in ["msme", "exemption", "startup", "waiver"]):
+            search_conditions.append(Tender.msme_exemption == True)
+            search_conditions.append(Tender.startup_exemption == True)
+
+        query = query.filter(or_(*search_conditions))
 
     tenders = query.order_by(Tender.submission_deadline.asc()).offset(skip).limit(limit).all()
+
+    company = db.query(CompanyProfile).filter(CompanyProfile.user_id == current_user.id).first()
+    if company:
+        for t in tenders:
+            try:
+                score = tender_matcher.evaluate_tender(company=company, tender=t)
+                t.overall_match_score = score.overall_match_score
+                t.is_hard_eligible = score.is_hard_eligible
+            except Exception as e:
+                logger.warning(f"Could not compute match score for tender {t.id}: {e}")
+
+    if eligibility in ("eligible", "matched"):
+        tenders = [t for t in tenders if getattr(t, 'is_hard_eligible', False) or (getattr(t, 'overall_match_score', 0) or 0) >= 60]
+    elif eligibility in ("ineligible", "disqualified"):
+        tenders = [t for t in tenders if not getattr(t, 'is_hard_eligible', True) or (getattr(t, 'overall_match_score', 0) or 0) < 60]
+
     return tenders
 
 
@@ -68,6 +96,16 @@ def get_tender(
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
+
+    company = db.query(CompanyProfile).filter(CompanyProfile.user_id == current_user.id).first()
+    if company:
+        try:
+            score = tender_matcher.evaluate_tender(company=company, tender=tender)
+            tender.overall_match_score = score.overall_match_score
+            tender.is_hard_eligible = score.is_hard_eligible
+        except Exception as e:
+            logger.warning(f"Could not compute match score for tender {tender.id}: {e}")
+
     return tender
 
 

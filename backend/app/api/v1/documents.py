@@ -9,11 +9,13 @@ from ...models.document import CompanyDocument, DocumentChunk
 from ...schemas.document import (
     CompanyDocumentResponse,
     DocumentChunkResponse,
+    DocumentAnalysisResponse,
     SemanticSearchRequest,
     SemanticSearchResult,
 )
 from ...services.storage.file_manager import file_manager
 from ...services.storage.text_extractor import text_extractor
+from ...services.storage.document_analyzer import document_analyzer
 from ...services.ai.embeddings import embedding_service
 from ..deps import get_current_user
 from ...core.logging import logger
@@ -45,46 +47,65 @@ def list_documents(
 @router.post("/upload", response_model=CompanyDocumentResponse)
 async def upload_document(
     file: UploadFile = File(...),
-    category: str = Form("Past_Experience"),
+    category: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
     """
     Upload a company credential document (PDF, DOCX, TXT),
-    extract text, generate chunk-level vector embeddings, and store in pgvector.
+    extract text, analyze document to generate metadata, executive description, and category,
+    generate chunk-level vector embeddings, and store in pgvector.
     """
     stored_path, filename, size, ext = await file_manager.save_uploaded_file(
         file=file,
         user_id=str(current_user.id),
     )
 
-    # 1. Create Document Record
+    # 1. Extract Text
+    raw_text = ""
+    try:
+        raw_text = text_extractor.extract_text(stored_path, ext)
+    except Exception as e:
+        logger.warning(f"Could not extract raw text from {filename}: {e}")
+
+    # 2. Analyze Document: Metadata, Small Description, Type Detection
+    analysis = document_analyzer.analyze_document(
+        raw_text=raw_text,
+        filename=filename,
+        file_type=ext,
+        file_size_bytes=size,
+        user_category=category,
+        user_title=title,
+    )
+
+    # 3. Create Document Record with Analysis
     doc = CompanyDocument(
         user_id=current_user.id,
         filename=filename,
         stored_path=stored_path,
         file_type=ext,
         file_size_bytes=size,
-        category=category,
-        title=title or filename,
+        category=analysis["category"],
+        title=analysis["title"],
+        summary=analysis["summary"],
+        doc_metadata=analysis["doc_metadata"],
+        tags=analysis["tags"],
     )
     db.add(doc)
     db.commit()
     db.refresh(doc)
 
-    # 2. Extract Text & Chunk
+    # 4. Chunk & Embed for Semantic Search
+    chunk_objects = []
     try:
-        raw_text = text_extractor.extract_text(stored_path, ext)
         chunks_data = text_extractor.chunk_text(
             raw_text,
             chunk_size_chars=1000,
             overlap_chars=150,
-            metadata_prefix={"filename": filename, "category": category},
+            metadata_prefix={"filename": filename, "category": doc.category},
         )
 
-        # 3. Embed & Save Chunks
-        chunk_objects = []
         for idx, (chunk_str, meta) in enumerate(chunks_data):
             emb = embedding_service.get_embedding(chunk_str)
             chunk_obj = DocumentChunk(
@@ -105,8 +126,53 @@ async def upload_document(
         logger.error(f"Error processing text chunks for {filename}: {e}")
 
     resp = CompanyDocumentResponse.model_validate(doc)
-    resp.chunks_count = len(chunk_objects) if 'chunk_objects' in locals() else 0
+    resp.chunks_count = len(chunk_objects)
     return resp
+
+
+@router.post("/{document_id}/analyze", response_model=DocumentAnalysisResponse)
+def analyze_existing_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Analyze or re-analyze an existing document in the vault to generate fresh metadata, description, and type."""
+    doc = db.query(CompanyDocument).filter(
+        CompanyDocument.id == document_id,
+        CompanyDocument.user_id == current_user.id,
+    ).first()
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    raw_text = text_extractor.extract_text(doc.stored_path, doc.file_type)
+    analysis = document_analyzer.analyze_document(
+        raw_text=raw_text,
+        filename=doc.filename,
+        file_type=doc.file_type,
+        file_size_bytes=doc.file_size_bytes,
+        user_category=doc.category,
+        user_title=doc.title,
+    )
+
+    doc.category = analysis["category"]
+    doc.title = analysis["title"]
+    doc.summary = analysis["summary"]
+    doc.doc_metadata = analysis["doc_metadata"]
+    doc.tags = analysis["tags"]
+
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    return DocumentAnalysisResponse(
+        document_id=doc.id,
+        category=doc.category,
+        title=doc.title,
+        summary=doc.summary,
+        doc_metadata=doc.doc_metadata or {},
+        tags=doc.tags or [],
+    )
 
 
 @router.post("/semantic-search", response_model=List[SemanticSearchResult])

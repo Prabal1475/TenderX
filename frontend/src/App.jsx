@@ -89,7 +89,7 @@ export default function App() {
       />
       <Navbar user={currentUser} onLogout={handleLogout} />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         <Sidebar
           currentTab={activeTab === 'tender-detail' ? 'tenders' : activeTab}
           onSelectTab={(tab) => {
@@ -98,7 +98,7 @@ export default function App() {
           }}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 ml-64 p-4 sm:p-6 lg:p-8 max-w-7xl w-[calc(100%-16rem)] min-h-[calc(100vh-4rem)]">
           {/* Pitch Walkthrough Bar */}
           <DemoWalkthroughBar
             onNavigateTab={setActiveTab}

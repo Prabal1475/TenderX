@@ -47,7 +47,7 @@ yarn-error.log*
 
 # Storage & Uploads
 backend/storage/
-storage/
+/storage/
 *.log
 logs/
 

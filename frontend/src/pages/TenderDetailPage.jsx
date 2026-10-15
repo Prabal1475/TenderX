@@ -136,27 +136,48 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
           </span>
         </div>
 
-        <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
-          {tender.title}
-        </h1>
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-2 flex-1">
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
+              {tender.title}
+            </h1>
+            <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 w-fit">
+              <Building className="w-4 h-4 text-teal-700 shrink-0" />
+              <span className="text-slate-500 font-semibold">Department:</span>
+              <strong className="text-slate-900 font-bold">{tender.authority}</strong>
+            </div>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-slate-500 pt-2 border-t border-slate-100">
-          <span className="flex items-center gap-1.5">
-            <Building className="w-4 h-4 text-slate-400" />
-            <strong className="text-slate-700 font-semibold">Authority:</strong> {tender.authority}
-          </span>
+          <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100 text-left md:text-right shrink-0">
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">Estimated Price / Value</span>
+            <span className="text-2xl font-black text-emerald-700 block mt-0.5">
+              {formatINR(tender.estimated_value_inr)}
+            </span>
+            <span className="text-xs text-slate-500 block mt-0.5">
+              EMD: <strong>{formatINR(tender.emd_amount_inr)}</strong> {tender.msme_exemption ? '(MSME Exempt)' : ''}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-slate-500 pt-3 border-t border-slate-100">
           <span className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-slate-400" />
-            <strong className="text-slate-700 font-semibold">Deadline:</strong> {formatDate(tender.submission_deadline)}
+            <strong className="text-slate-700 font-semibold">Submission Deadline:</strong> {formatDate(tender.submission_deadline)}
           </span>
+          {tender.opening_date && (
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <strong className="text-slate-700 font-semibold">Bid Opening:</strong> {formatDate(tender.opening_date)}
+            </span>
+          )}
           {tender.document_url && (
             <a
               href={tender.document_url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 text-teal-700 font-semibold hover:text-teal-900 hover:underline"
+              className="flex items-center gap-1 text-teal-700 font-bold hover:text-teal-900 hover:underline"
             >
-              <span>Official Notice PDF</span>
+              <span>Official Tender Notice PDF</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
@@ -270,7 +291,43 @@ export default function TenderDetailPage({ tenderId, onBack, onOpenStudio }) {
                 No bank guarantee / FDR required upfront
               </span>
             </div>
+
+            {/* Past Project Value Threshold */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800">Single Contract Value</span>
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-1.5 py-0.5 rounded">
+                  Criterion
+                </span>
+              </div>
+              <p className="text-slate-600 text-[11px]">
+                Required: <strong className="text-slate-900 font-bold">{crit.past_project_value_pct || 50}%</strong> of tender value
+              </p>
+              <span className="text-[10px] text-slate-500 font-medium">
+                In a single previously executed government/PSU contract
+              </span>
+            </div>
           </div>
+
+          {/* Required Certifications Verification */}
+          {crit.required_certifications?.length > 0 && (
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
+              <span className="font-bold text-slate-800 text-xs block">
+                Mandatory Accreditation & Technical Certifications:
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {crit.required_certifications.map((cert) => (
+                  <span
+                    key={cert}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-xl bg-white border border-slate-200 text-slate-800 shadow-2xs"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+                    <span>{cert}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Risk Factors Alert */}
           {matchScore.risk_factors?.length > 0 && (

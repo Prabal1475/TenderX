@@ -52,3 +52,16 @@ export function getDaysRemaining(dateString) {
   if (diffDays === 1) return "Due Tomorrow";
   return `${diffDays} days left`;
 }
+
+/**
+ * Formats file size in bytes into KB or MB.
+ */
+export function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return "0 KB";
+  const kb = bytes / 1024;
+  if (kb >= 1024) {
+    return `${(kb / 1024).toFixed(1)} MB`;
+  }
+  return `${Math.round(kb)} KB`;
+}
+

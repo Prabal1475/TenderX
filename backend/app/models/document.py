@@ -35,6 +35,7 @@ class CompanyDocument(Base):
     
     title = Column(String(255), nullable=True)
     summary = Column(Text, nullable=True)
+    doc_metadata = Column(JSON, default=dict)
     tags = Column(JSON, default=list)
 
     created_at = Column(

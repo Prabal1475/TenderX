@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ currentTab, onSelectTab }) {
   return (
-    <aside className="w-64 border-r border-slate-200/80 bg-white flex flex-col justify-between p-4 shrink-0 shadow-[1px_0_2px_rgba(0,0,0,0.02)]">
+    <aside className="fixed top-16 left-0 bottom-0 w-64 border-r border-slate-200/80 bg-white flex flex-col justify-between p-4 shrink-0 shadow-[1px_0_2px_rgba(0,0,0,0.02)] z-30 overflow-y-auto">
       <nav className="space-y-1">
         <p className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Navigation

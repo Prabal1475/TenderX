@@ -55,6 +55,8 @@ class TenderResponse(TenderBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    overall_match_score: Optional[int] = None
+    is_hard_eligible: Optional[bool] = None
 
     class Config:
         from_attributes = True

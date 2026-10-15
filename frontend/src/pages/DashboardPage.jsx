@@ -66,6 +66,11 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
     return diff > 0 && diff <= 10;
   }).length;
 
+  const matchedTenders = tenders.filter(
+    (t) => (t.overall_match_score || 0) >= 60 || t.is_hard_eligible
+  );
+  const matchedCount = matchedTenders.length;
+
   return (
     <div className="space-y-8">
       {/* Welcome & Quick Action Bar */}
@@ -116,7 +121,7 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
           <>
             <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade shadow-xs" style={{ animationDelay: '0ms' }}>
               <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
-                <span>Active Tenders</span>
+                <span>Total Active Tenders</span>
                 <span className="p-1.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/60">
                   <TrendingUp className="w-4 h-4" />
                 </span>
@@ -151,15 +156,18 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
 
             <div className="glass-panel p-5 rounded-2xl relative overflow-hidden animate-cascade shadow-xs" style={{ animationDelay: '120ms' }}>
               <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
-                <span>Top Qualification Match</span>
-                <span className="p-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200/60">
+                <span>Tenders Matched</span>
+                <span className="p-1.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200/60">
                   <Sparkles className="w-4 h-4" />
                 </span>
               </div>
-              <p className="text-2xl font-black text-purple-800">
-                {recommendations[0]?.overall_match_score || 88}%
+              <div className="flex items-baseline gap-1.5">
+                <p className="text-2xl font-black text-teal-800">{matchedCount}</p>
+                <span className="text-sm font-bold text-slate-500">/ {tenders.length} total</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
+                {tenders.length > 0 ? `${Math.round((matchedCount / tenders.length) * 100)}% company qualification rate` : 'Turnover & scope compatible'}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1.5 font-medium">Turnover & scope compatible</p>
             </div>
           </>
         )}
