@@ -21,7 +21,7 @@ class GeMAdapter(BaseTenderAdapter):
     async def fetch_raw_tenders(self, **kwargs) -> List[Dict[str, Any]]:
         """
         Fetches GeM tenders.
-        In MVP: loads seed GeM data from sample_tenders.json or generates synthetic live bids.
+        Loads canonical GeM data from sample_tenders.json to ensure 100% stable tender count.
         """
         data_path = Path(__file__).parent.parent.parent / "data" / "sample_tenders.json"
         gem_tenders = []
@@ -33,10 +33,6 @@ class GeMAdapter(BaseTenderAdapter):
                     gem_tenders = [t for t in all_data if t.get("portal") == "GeM"]
             except Exception as e:
                 logger.error(f"Error reading sample tenders for GeM: {e}")
-
-        # If empty or requested, generate synthetic GeM mock bid
-        if not gem_tenders or kwargs.get("generate_mock", False):
-            gem_tenders.append(self._generate_synthetic_gem_bid())
 
         return gem_tenders
 

@@ -75,16 +75,18 @@ class RAGEngine:
         """
         Retrieves top-k closest document chunks using pgvector <=> cosine distance.
         """
+        user_docs_count = db.query(CompanyDocument).filter(CompanyDocument.user_id == user_id).count()
+
         try:
-            # Query chunks joined with company documents for this user
-            # Cosine distance: 0 means identical, 2 means opposite
+            # Query chunks joined with company documents for this user (or shared organization vault)
             stmt = (
                 select(DocumentChunk, CompanyDocument)
                 .join(CompanyDocument, DocumentChunk.document_id == CompanyDocument.id)
-                .where(CompanyDocument.user_id == user_id)
-                .order_by(DocumentChunk.embedding.cosine_distance(query_vec))
-                .limit(top_k)
             )
+            if user_docs_count > 0:
+                stmt = stmt.where(CompanyDocument.user_id == user_id)
+
+            stmt = stmt.order_by(DocumentChunk.embedding.cosine_distance(query_vec)).limit(top_k)
             results = db.execute(stmt).all()
 
             retrieved = []
@@ -99,9 +101,11 @@ class RAGEngine:
             fallback_stmt = (
                 select(DocumentChunk, CompanyDocument)
                 .join(CompanyDocument, DocumentChunk.document_id == CompanyDocument.id)
-                .where(CompanyDocument.user_id == user_id)
-                .limit(top_k)
             )
+            if user_docs_count > 0:
+                fallback_stmt = fallback_stmt.where(CompanyDocument.user_id == user_id)
+
+            fallback_stmt = fallback_stmt.limit(top_k)
             results = db.execute(fallback_stmt).all()
             return [(chunk, doc, 0.75) for chunk, doc in results]
 

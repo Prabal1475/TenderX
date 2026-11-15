@@ -13,7 +13,7 @@ from ...services.ingestion.cppp_adapter import cppp_adapter
 from ...services.ingestion.bulk_importer import bulk_importer
 from ...services.ai.embeddings import embedding_service
 from ...services.ai.matcher import tender_matcher
-from ..deps import get_current_user
+from ..deps import get_current_user, require_bid_manager
 from ...core.logging import logger
 
 router = APIRouter(prefix="/tenders", tags=["Tenders"])
@@ -66,9 +66,12 @@ def list_tenders(
 
         query = query.filter(or_(*search_conditions))
 
-    tenders = query.order_by(Tender.submission_deadline.asc()).offset(skip).limit(limit).all()
+    tenders = query.order_by(Tender.submission_deadline.asc(), Tender.tender_id.asc()).offset(skip).limit(limit).all()
 
     company = db.query(CompanyProfile).filter(CompanyProfile.user_id == current_user.id).first()
+    if not company:
+        company = db.query(CompanyProfile).first()
+
     if company:
         for t in tenders:
             try:
@@ -114,7 +117,7 @@ async def trigger_ingestion(
     portal: str = Query("GeM", description="Source portal to ingest: 'GeM', 'CPPP', or 'all'"),
     generate_mock: bool = Query(False, description="Generate realistic synthetic mock bids"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
     """Trigger ingestion from Indian government tender adapters (GeM and CPPP)."""
     adapters = []
@@ -154,7 +157,7 @@ async def trigger_ingestion(
 async def bulk_import_tenders(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
     """Bulk import tenders from uploaded JSON or CSV files."""
     contents = await file.read()
@@ -187,7 +190,7 @@ def update_tender_status(
     tender_id: UUID,
     status: str = Query(..., description="Status: Active, Bookmarked, Bidding, Submitted, Archived"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
     """Update tender pipeline status."""
     tender = db.query(Tender).filter(Tender.id == tender_id).first()

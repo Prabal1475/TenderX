@@ -41,7 +41,7 @@ export default function DashboardPage({ onNavigateTender, onSelectTab }) {
 
   const handleQuickIngest = async () => {
     setSyncing(true);
-    const ingestPromise = api.ingestTenders('all', true).then(loadData);
+    const ingestPromise = api.ingestTenders('all', false).then(loadData);
     toast.promise(ingestPromise, {
       loading: 'Syncing live GeM & CPPP tender feeds...',
       success: 'Tender intelligence repository updated successfully!',

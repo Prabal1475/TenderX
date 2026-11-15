@@ -19,7 +19,10 @@ class CPPPAdapter(BaseTenderAdapter):
         return "Central Public Procurement Portal (CPPP)"
 
     async def fetch_raw_tenders(self, **kwargs) -> List[Dict[str, Any]]:
-        """Fetches CPPP tenders from seed file or synthetic feed."""
+        """
+        Fetches CPPP tenders from canonical sample_tenders.json.
+        Ensures stable tender count without adding synthetic random bids.
+        """
         data_path = Path(__file__).parent.parent.parent / "data" / "sample_tenders.json"
         cppp_tenders = []
 
@@ -30,9 +33,6 @@ class CPPPAdapter(BaseTenderAdapter):
                     cppp_tenders = [t for t in all_data if t.get("portal") == "CPPP"]
             except Exception as e:
                 logger.error(f"Error reading sample tenders for CPPP: {e}")
-
-        if not cppp_tenders or kwargs.get("generate_mock", False):
-            cppp_tenders.append(self._generate_synthetic_cppp_tender())
 
         return cppp_tenders
 

@@ -25,6 +25,7 @@ def get_password_hash(password: str) -> str:
 def create_access_token(
     subject: Union[str, Any],
     expires_delta: Optional[timedelta] = None,
+    claims: Optional[dict] = None,
 ) -> str:
     """Create a signed JWT access token."""
     if expires_delta:
@@ -39,6 +40,8 @@ def create_access_token(
         "sub": str(subject),
         "iat": datetime.now(timezone.utc),
     }
+    if claims:
+        to_encode.update(claims)
 
     encoded_jwt = jwt.encode(
         to_encode,

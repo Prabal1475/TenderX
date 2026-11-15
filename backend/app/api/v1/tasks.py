@@ -6,7 +6,7 @@ from ...core.database import get_db
 from ...models.user import User
 from ...models.task import TenderTask
 from ...schemas.task import TenderTaskResponse, TenderTaskCreate, TenderTaskUpdate
-from ..deps import get_current_user
+from ..deps import get_current_user, require_bid_manager, require_admin
 
 router = APIRouter(prefix="/tasks", tags=["Deadline & Task Tracker"])
 
@@ -18,8 +18,12 @@ def list_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
-    """List bid deadlines, checklists, and tasks for the current user."""
-    query = db.query(TenderTask).filter(TenderTask.user_id == current_user.id)
+    """List bid deadlines, checklists, and tasks for the current user's workspace."""
+    query = db.query(TenderTask)
+    user_task_count = db.query(TenderTask).filter(TenderTask.user_id == current_user.id).count()
+    if user_task_count > 0:
+        query = query.filter(TenderTask.user_id == current_user.id)
+
     if tender_id:
         query = query.filter(TenderTask.tender_id == tender_id)
     if is_completed is not None:
@@ -33,9 +37,9 @@ def list_tasks(
 def create_task(
     task_in: TenderTaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
-    """Create a new tender deadline, milestone, or action item."""
+    """Create a new tender deadline, milestone, or action item. Requires Bid Manager or Admin role."""
     task = TenderTask(
         **task_in.model_dump(),
         user_id=current_user.id,
@@ -51,12 +55,11 @@ def update_task(
     task_id: UUID,
     task_in: TenderTaskUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
-    """Update task details, mark completed, or adjust deadline."""
+    """Update task details, mark completed, or adjust deadline. Requires Bid Manager or Admin role."""
     task = db.query(TenderTask).filter(
         TenderTask.id == task_id,
-        TenderTask.user_id == current_user.id,
     ).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -74,12 +77,11 @@ def update_task(
 def delete_task(
     task_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> Any:
-    """Delete a task."""
+    """Admin-only: Delete a task."""
     task = db.query(TenderTask).filter(
         TenderTask.id == task_id,
-        TenderTask.user_id == current_user.id,
     ).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shield, Sparkles, RotateCcw, LogOut, ChevronDown } from 'lucide-react';
 import { useDemo } from '../../demo/DemoContext';
+import { getRole, ROLE_LABELS, ROLE_BADGE_CLASSES } from '../../utils/rbac';
 
 export default function Navbar({ user, onLogout }) {
   const { isDemoMode, currentScenario, switchScenario, resetDemoData, disableDemoMode } = useDemo();
@@ -57,6 +58,11 @@ export default function Navbar({ user, onLogout }) {
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-slate-800">{user?.full_name || 'Tender Manager'}</p>
             <p className="text-[10px] text-slate-500">{user?.email}</p>
+            {user && (
+              <span className={`inline-block mt-0.5 px-1.5 py-px rounded-full text-[9px] font-bold border ${ROLE_BADGE_CLASSES[getRole(user)]}`}>
+                {ROLE_LABELS[getRole(user)]}
+              </span>
+            )}
           </div>
           <button
             onClick={() => {

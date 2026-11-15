@@ -10,7 +10,7 @@ export default function LoginPage({ onLoginSuccess }) {
   const [fullName, setFullName] = useState('Prabal Singh');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { enableDemoMode } = useDemo();
+  const { enableDemoMode, disableDemoMode } = useDemo();
 
   const handleLaunchDemo = () => {
     enableDemoMode('scenario_1');
@@ -22,24 +22,33 @@ export default function LoginPage({ onLoginSuccess }) {
     setLoading(true);
     setError('');
 
+    // Ensure demo mode is explicitly disabled so real database authentication is used
+    if (typeof disableDemoMode === 'function') {
+      disableDemoMode();
+    }
+    localStorage.removeItem('tenderx_demo_mode');
+
     try {
       if (isRegister) {
         await api.register(email, password, fullName);
       }
       const data = await api.login(email, password);
-      setAuthToken(data.access_token);
+      if (data && data.access_token) {
+        setAuthToken(data.access_token);
+      }
       onLoginSuccess();
     } catch (err) {
-      setError(err.message || 'Authentication failed. Please check credentials or use Demo Mode.');
+      setError(err.message || 'Authentication failed. Please verify your username/email and password.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePrefillAdmin = () => {
-    setEmail('admin@tenderx.local');
-    setPassword('AdminPassword123!');
+  const handlePrefill = (roleEmail, rolePassword) => {
+    setEmail(roleEmail);
+    setPassword(rolePassword);
     setIsRegister(false);
+    setError('');
   };
 
   return (
@@ -130,16 +139,18 @@ export default function LoginPage({ onLoginSuccess }) {
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Work Email</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {isRegister ? 'Work Email' : 'Username or Email'}
+              </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-50/50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/20 transition-colors"
-                  placeholder="name@company.com"
+                  placeholder={isRegister ? "name@company.com" : "admin@tenderx.local or admin"}
                 />
               </div>
             </div>
@@ -169,21 +180,46 @@ export default function LoginPage({ onLoginSuccess }) {
             </button>
           </form>
 
-          <div className="mt-4 pt-3.5 border-t border-slate-200 flex items-center justify-between text-xs">
-            <button
-              onClick={() => setIsRegister(!isRegister)}
-              className="text-teal-700 hover:text-teal-900 hover:underline font-semibold text-[11px]"
-            >
-              {isRegister ? 'Already registered? Sign in' : 'New organization? Register'}
-            </button>
+          {/* Quick Database User Selectors */}
+          <div className="mt-4 pt-3.5 border-t border-slate-200">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 text-center">
+              Direct Database Accounts (Pre-configured)
+            </p>
+            <div className="grid grid-cols-3 gap-1.5 mb-3">
+              <button
+                type="button"
+                onClick={() => handlePrefill('admin@tenderx.local', 'AdminPassword123!')}
+                className="py-1 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold text-center transition-colors truncate"
+                title="Admin: admin@tenderx.local / AdminPassword123!"
+              >
+                Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrefill('bidmanager@tenderx.local', 'BidManager123!')}
+                className="py-1 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold text-center transition-colors truncate"
+                title="Bid Manager: bidmanager@tenderx.local / BidManager123!"
+              >
+                Bid Manager
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrefill('viewer@tenderx.local', 'Viewer123!')}
+                className="py-1 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold text-center transition-colors truncate"
+                title="Viewer: viewer@tenderx.local / Viewer123!"
+              >
+                Auditor
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={handlePrefillAdmin}
-              className="text-slate-500 hover:text-slate-800 text-[11px] font-medium"
-            >
-              Fill Default Seed Admin
-            </button>
+            <div className="flex items-center justify-between text-xs">
+              <button
+                onClick={() => setIsRegister(!isRegister)}
+                className="text-teal-700 hover:text-teal-900 hover:underline font-semibold text-[11px]"
+              >
+                {isRegister ? 'Already registered? Sign in' : 'New organization? Register'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

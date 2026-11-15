@@ -15,10 +15,25 @@ import {
   X,
   FileText,
   Building,
+  Columns,
+  Eye,
+  Bold,
+  Italic,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Table as TableIcon,
+  Quote,
+  Minus,
+  Check,
+  Maximize2,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../api/client';
 import { useDemo } from '../demo/DemoContext';
+import MarkdownViewer from '../components/common/MarkdownViewer';
 
 const TEMPLATES = [
   { id: 'Compliance_Matrix', label: 'Technical Compliance Matrix', desc: 'Clause-by-clause compliance table format' },
@@ -27,8 +42,9 @@ const TEMPLATES = [
   { id: 'Experience_Summary', label: 'Past Experience & Credentials', desc: 'Summary of past contracts and client references' },
 ];
 
-export default function BidStudioPage({ initialTenderId }) {
+export default function BidStudioPage({ initialTenderId, user }) {
   const { isDemoMode, getActiveTender } = useDemo();
+  const isViewer = user?.role === 'viewer';
   const [tenders, setTenders] = useState([]);
   const [selectedTenderId, setSelectedTenderId] = useState(initialTenderId || '');
   const [template, setTemplate] = useState('Compliance_Matrix');
@@ -39,7 +55,463 @@ export default function BidStudioPage({ initialTenderId }) {
   const [saving, setSaving] = useState(false);
   const [editedText, setEditedText] = useState('');
   const [showExportModal, setShowExportModal] = useState(false);
+  const [viewMode, setViewMode] = useState('split'); // 'split' | 'editor' | 'preview'
+  const [fontSize, setFontSize] = useState('normal'); // 'normal' | 'large'
   const streamIntervalRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    h2: false,
+    h3: false,
+    bullet: false,
+    number: false,
+    quote: false,
+  });
+
+  const checkActiveFormats = () => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editedText;
+
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const nextNewline = text.indexOf('\n', end);
+    const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+    const lineText = text.substring(lineStart, lineEnd);
+
+    const isH3 = lineText.startsWith('### ');
+    const isH2 = !isH3 && lineText.startsWith('## ');
+    const isBullet = /^(\s*)[-*]\s+/.test(lineText);
+    const isNumber = /^(\s*)\d+\.\s+/.test(lineText);
+    const isQuote = /^(\s*)>\s*/.test(lineText);
+
+    let isBold = false;
+    let isItalic = false;
+
+    if (start < end) {
+      const sel = text.substring(start, end);
+      if (sel.startsWith('**') && sel.endsWith('**') && sel.length >= 4) {
+        isBold = true;
+      } else if (start >= 2 && end <= text.length - 2 && text.substring(start - 2, start) === '**' && text.substring(end, end + 2) === '**') {
+        isBold = true;
+      }
+
+      if (sel.startsWith('*') && sel.endsWith('*') && !sel.startsWith('**') && !sel.endsWith('**') && sel.length >= 2) {
+        isItalic = true;
+      } else if (start >= 1 && end <= text.length - 1) {
+        const b1 = text.charAt(start - 1);
+        const a1 = text.charAt(end);
+        const b2 = start >= 2 ? text.charAt(start - 2) : '';
+        const a2 = end + 1 < text.length ? text.charAt(end + 1) : '';
+        if (b1 === '*' && b2 !== '*' && a1 === '*' && a2 !== '*') {
+          isItalic = true;
+        }
+      }
+    } else {
+      const col = start - lineStart;
+      const boldRegex = /\*\*([^*]+)\*\*/g;
+      let match;
+      while ((match = boldRegex.exec(lineText)) !== null) {
+        if (col >= match.index && col <= match.index + match[0].length) {
+          isBold = true;
+          break;
+        }
+      }
+
+      const italicRegex = /(?<!\*)\*([^*]+)\*(?!\*)/g;
+      while ((match = italicRegex.exec(lineText)) !== null) {
+        if (col >= match.index && col <= match.index + match[0].length) {
+          isItalic = true;
+          break;
+        }
+      }
+    }
+
+    setActiveFormats({
+      bold: isBold,
+      italic: isItalic,
+      h2: isH2,
+      h3: isH3,
+      bullet: isBullet,
+      number: isNumber,
+      quote: isQuote,
+    });
+  };
+
+  useEffect(() => {
+    checkActiveFormats();
+  }, [editedText]);
+
+  const toggleInlineFormatting = (type) => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editedText;
+
+    if (type === 'bold') {
+      const marker = '**';
+      const mLen = 2;
+
+      if (start < end) {
+        const sel = text.substring(start, end);
+        // Case 1: Selection starts and ends with **
+        if (sel.startsWith(marker) && sel.endsWith(marker) && sel.length >= 4) {
+          const inner = sel.substring(mLen, sel.length - mLen);
+          const newText = text.substring(0, start) + inner + text.substring(end);
+          setEditedText(newText);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start, start + inner.length);
+            checkActiveFormats();
+          }, 0);
+          return;
+        }
+
+        // Case 2: Selection surrounded by **
+        if (
+          start >= mLen &&
+          end <= text.length - mLen &&
+          text.substring(start - mLen, start) === marker &&
+          text.substring(end, end + mLen) === marker
+        ) {
+          const newText = text.substring(0, start - mLen) + sel + text.substring(end + mLen);
+          setEditedText(newText);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start - mLen, end - mLen);
+            checkActiveFormats();
+          }, 0);
+          return;
+        }
+
+        // Case 3: Toggle ON
+        const replacement = `${marker}${sel}${marker}`;
+        const newText = text.substring(0, start) + replacement + text.substring(end);
+        setEditedText(newText);
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + mLen, start + mLen + sel.length);
+          checkActiveFormats();
+        }, 0);
+      } else {
+        // Cursor only (no selection)
+        const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+        const nextNewline = text.indexOf('\n', start);
+        const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+        const lineText = text.substring(lineStart, lineEnd);
+        const col = start - lineStart;
+
+        const boldRegex = /\*\*([^*]+)\*\*/g;
+        let match;
+        let insideMatch = null;
+        while ((match = boldRegex.exec(lineText)) !== null) {
+          const mStart = match.index;
+          const mEnd = mStart + match[0].length;
+          if (col >= mStart && col <= mEnd) {
+            insideMatch = {
+              globalStart: lineStart + mStart,
+              globalEnd: lineStart + mEnd,
+              inner: match[1],
+            };
+            break;
+          }
+        }
+
+        if (insideMatch) {
+          // Toggle OFF
+          const newText = text.substring(0, insideMatch.globalStart) + insideMatch.inner + text.substring(insideMatch.globalEnd);
+          setEditedText(newText);
+          const newCursor = Math.max(insideMatch.globalStart, Math.min(newText.length, start - mLen));
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(newCursor, newCursor);
+            checkActiveFormats();
+          }, 0);
+        } else {
+          // Toggle ON
+          const wordMatch = lineText.substring(0, col).match(/(\w+)$/);
+          const afterWordMatch = lineText.substring(col).match(/^(\w+)/);
+          if (wordMatch || afterWordMatch) {
+            const wordStartRel = wordMatch ? col - wordMatch[1].length : col;
+            const wordEndRel = afterWordMatch ? col + afterWordMatch[1].length : col;
+            const word = lineText.substring(wordStartRel, wordEndRel);
+            const gStart = lineStart + wordStartRel;
+            const gEnd = lineStart + wordEndRel;
+            const newText = text.substring(0, gStart) + `${marker}${word}${marker}` + text.substring(gEnd);
+            setEditedText(newText);
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(gStart + mLen, gStart + mLen + word.length);
+              checkActiveFormats();
+            }, 0);
+          } else {
+            const placeholder = 'bold text';
+            const newText = text.substring(0, start) + `${marker}${placeholder}${marker}` + text.substring(end);
+            setEditedText(newText);
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(start + mLen, start + mLen + placeholder.length);
+              checkActiveFormats();
+            }, 0);
+          }
+        }
+      }
+    } else if (type === 'italic') {
+      const marker = '*';
+      const mLen = 1;
+
+      if (start < end) {
+        const sel = text.substring(start, end);
+        if (sel.startsWith('*') && sel.endsWith('*') && !sel.startsWith('**') && !sel.endsWith('**') && sel.length >= 2) {
+          const inner = sel.substring(1, sel.length - 1);
+          const newText = text.substring(0, start) + inner + text.substring(end);
+          setEditedText(newText);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(start, start + inner.length);
+            checkActiveFormats();
+          }, 0);
+          return;
+        }
+
+        if (start >= 1 && end <= text.length - 1) {
+          const b1 = text.charAt(start - 1);
+          const a1 = text.charAt(end);
+          const b2 = start >= 2 ? text.charAt(start - 2) : '';
+          const a2 = end + 1 < text.length ? text.charAt(end + 1) : '';
+          if (b1 === '*' && b2 !== '*' && a1 === '*' && a2 !== '*') {
+            const newText = text.substring(0, start - 1) + sel + text.substring(end + 1);
+            setEditedText(newText);
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(start - 1, end - 1);
+              checkActiveFormats();
+            }, 0);
+            return;
+          }
+        }
+
+        const replacement = `${marker}${sel}${marker}`;
+        const newText = text.substring(0, start) + replacement + text.substring(end);
+        setEditedText(newText);
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + mLen, start + mLen + sel.length);
+          checkActiveFormats();
+        }, 0);
+      } else {
+        const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+        const nextNewline = text.indexOf('\n', start);
+        const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+        const lineText = text.substring(lineStart, lineEnd);
+        const col = start - lineStart;
+
+        const italicRegex = /(?<!\*)\*([^*]+)\*(?!\*)/g;
+        let match;
+        let insideMatch = null;
+        while ((match = italicRegex.exec(lineText)) !== null) {
+          const mStart = match.index;
+          const mEnd = mStart + match[0].length;
+          if (col >= mStart && col <= mEnd) {
+            insideMatch = {
+              globalStart: lineStart + mStart,
+              globalEnd: lineStart + mEnd,
+              inner: match[1],
+            };
+            break;
+          }
+        }
+
+        if (insideMatch) {
+          const newText = text.substring(0, insideMatch.globalStart) + insideMatch.inner + text.substring(insideMatch.globalEnd);
+          setEditedText(newText);
+          const newCursor = Math.max(insideMatch.globalStart, Math.min(newText.length, start - mLen));
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(newCursor, newCursor);
+            checkActiveFormats();
+          }, 0);
+        } else {
+          const wordMatch = lineText.substring(0, col).match(/(\w+)$/);
+          const afterWordMatch = lineText.substring(col).match(/^(\w+)/);
+          if (wordMatch || afterWordMatch) {
+            const wordStartRel = wordMatch ? col - wordMatch[1].length : col;
+            const wordEndRel = afterWordMatch ? col + afterWordMatch[1].length : col;
+            const word = lineText.substring(wordStartRel, wordEndRel);
+            const gStart = lineStart + wordStartRel;
+            const gEnd = lineStart + wordEndRel;
+            const newText = text.substring(0, gStart) + `${marker}${word}${marker}` + text.substring(gEnd);
+            setEditedText(newText);
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(gStart + mLen, gStart + mLen + word.length);
+              checkActiveFormats();
+            }, 0);
+          } else {
+            const placeholder = 'italic text';
+            const newText = text.substring(0, start) + `${marker}${placeholder}${marker}` + text.substring(end);
+            setEditedText(newText);
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(start + mLen, start + mLen + placeholder.length);
+              checkActiveFormats();
+            }, 0);
+          }
+        }
+      }
+    }
+  };
+
+  const toggleLineFormatting = (type) => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editedText;
+
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const nextNewline = text.indexOf('\n', end);
+    const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+    const lineText = text.substring(lineStart, lineEnd);
+
+    let newLineText = lineText;
+    let cursorOffset = 0;
+
+    if (type === 'h2') {
+      if (lineText.startsWith('## ')) {
+        newLineText = lineText.substring(3);
+        cursorOffset = -3;
+      } else if (lineText.startsWith('### ')) {
+        newLineText = '## ' + lineText.substring(4);
+        cursorOffset = -1;
+      } else {
+        newLineText = '## ' + lineText.replace(/^#+\s*/, '');
+        cursorOffset = newLineText.length - lineText.length;
+      }
+    } else if (type === 'h3') {
+      if (lineText.startsWith('### ')) {
+        newLineText = lineText.substring(4);
+        cursorOffset = -4;
+      } else if (lineText.startsWith('## ')) {
+        newLineText = '### ' + lineText.substring(3);
+        cursorOffset = 1;
+      } else {
+        newLineText = '### ' + lineText.replace(/^#+\s*/, '');
+        cursorOffset = newLineText.length - lineText.length;
+      }
+    } else if (type === 'bullet') {
+      if (/^(\s*)[-*]\s+/.test(lineText)) {
+        newLineText = lineText.replace(/^(\s*)[-*]\s+/, '$1');
+        cursorOffset = newLineText.length - lineText.length;
+      } else {
+        const stripped = lineText.replace(/^(\s*)\d+\.\s+/, '$1');
+        newLineText = '- ' + stripped;
+        cursorOffset = newLineText.length - lineText.length;
+      }
+    } else if (type === 'number') {
+      if (/^(\s*)\d+\.\s+/.test(lineText)) {
+        newLineText = lineText.replace(/^(\s*)\d+\.\s+/, '$1');
+        cursorOffset = newLineText.length - lineText.length;
+      } else {
+        const stripped = lineText.replace(/^(\s*)[-*]\s+/, '$1');
+        newLineText = '1. ' + stripped;
+        cursorOffset = newLineText.length - lineText.length;
+      }
+    } else if (type === 'quote') {
+      if (/^(\s*)>\s*/.test(lineText)) {
+        newLineText = lineText.replace(/^(\s*)>\s*/, '$1');
+        cursorOffset = newLineText.length - lineText.length;
+      } else {
+        newLineText = '> ' + lineText;
+        cursorOffset = 2;
+      }
+    }
+
+    const newText = text.substring(0, lineStart) + newLineText + text.substring(lineEnd);
+    setEditedText(newText);
+    setTimeout(() => {
+      textarea.focus();
+      const newCursor = Math.max(lineStart, Math.min(newText.length, start + cursorOffset));
+      textarea.setSelectionRange(newCursor, newCursor);
+      checkActiveFormats();
+    }, 0);
+  };
+
+  const toggleBadge = (badgeText) => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editedText;
+    const token = `**${badgeText}**`;
+
+    if (start < end) {
+      const sel = text.substring(start, end).trim();
+      if (sel === token || sel === badgeText) {
+        // Toggle OFF
+        const newText = text.substring(0, start) + text.substring(end);
+        setEditedText(newText);
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start, start);
+          checkActiveFormats();
+        }, 0);
+        return;
+      }
+    }
+
+    const replacement = `${token} `;
+    const newText = text.substring(0, start) + replacement + text.substring(end);
+    setEditedText(newText);
+    setTimeout(() => {
+      textarea.focus();
+      const c = start + replacement.length;
+      textarea.setSelectionRange(c, c);
+      checkActiveFormats();
+    }, 0);
+  };
+
+  const insertComplianceTable = () => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const tableTemplate =
+      '\n\n| Clause No. | Tender Specification Parameter | Bidder Compliance Status | Verifiable Citation / Annexure Reference |\n| :--- | :--- | :---: | :--- |\n| **Cl 1.1** | Requirement parameter statement | **COMPLIED** | Audited Balance Sheets *(Annexure A-1)* |\n\n';
+    const newText = editedText.substring(0, start) + tableTemplate + editedText.substring(start);
+    setEditedText(newText);
+    setTimeout(() => {
+      textarea.focus();
+      const c = start + tableTemplate.length;
+      textarea.setSelectionRange(c, c);
+      checkActiveFormats();
+    }, 0);
+  };
+
+  const fmtBtnClass = (active) =>
+    `p-1.5 rounded-lg border transition-all ${
+      active
+        ? 'bg-teal-600 text-white border-teal-700 shadow-xs'
+        : 'text-slate-700 hover:bg-white hover:text-slate-900 border-transparent hover:border-slate-200'
+    }`;
+
+  const insertHorizontalRule = () => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const rule = '\n\n---\n\n';
+    const newText = editedText.substring(0, start) + rule + editedText.substring(start);
+    setEditedText(newText);
+    setTimeout(() => {
+      textarea.focus();
+      const c = start + rule.length;
+      textarea.setSelectionRange(c, c);
+      checkActiveFormats();
+    }, 0);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -270,7 +742,8 @@ export default function BidStudioPage({ initialTenderId }) {
 
           <button
             onClick={handleGenerate}
-            disabled={generating || !selectedTenderId}
+            disabled={generating || !selectedTenderId || isViewer}
+            title={isViewer ? 'Read-only role: generation disabled' : undefined}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white btn-tactile active:scale-[0.97] shadow-sm shadow-teal-700/20 disabled:opacity-50"
           >
             <Sparkles className={`w-4 h-4 stroke-[2.5] ${generating ? 'animate-spin' : ''}`} />
@@ -360,7 +833,8 @@ export default function BidStudioPage({ initialTenderId }) {
 
                   <button
                     onClick={() => handleSave()}
-                    disabled={saving}
+                    disabled={saving || isViewer}
+                    title={isViewer ? 'Read-only role: saving disabled' : 'Save Draft'}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs btn-tactile active:scale-[0.97]"
                   >
                     <Save className="w-3.5 h-3.5" />
@@ -398,32 +872,274 @@ export default function BidStudioPage({ initialTenderId }) {
                 </div>
               )}
 
-              {/* Dual-Pane Editor & Markdown Viewer */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Human-in-the-Loop Editor
-                    </p>
-                    <span className="text-[10px] text-slate-500 font-mono">{editedText.length} characters</span>
-                  </div>
-                  <textarea
-                    value={editedText}
-                    onChange={(e) => setEditedText(e.target.value)}
-                    rows={18}
-                    className="w-full p-4 bg-slate-50/70 border border-slate-300 rounded-2xl text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/20 leading-relaxed resize-none"
-                    placeholder="Proposal content..."
-                  />
+              {/* View Mode Switcher & Live Status Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-200/80">
+                <div className="inline-flex items-center p-1 bg-white rounded-xl border border-slate-200/90 shadow-2xs text-xs font-semibold text-slate-600">
+                  <button
+                    onClick={() => setViewMode('split')}
+                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all btn-tactile ${
+                      viewMode === 'split'
+                        ? 'bg-teal-600 text-white font-bold shadow-xs'
+                        : 'hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Columns className="w-3.5 h-3.5" />
+                    <span>Split View</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('editor')}
+                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all btn-tactile ${
+                      viewMode === 'editor'
+                        ? 'bg-teal-600 text-white font-bold shadow-xs'
+                        : 'hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <FileEdit className="w-3.5 h-3.5" />
+                    <span>Editor Only</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('preview')}
+                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all btn-tactile ${
+                      viewMode === 'preview'
+                        ? 'bg-teal-600 text-white font-bold shadow-xs'
+                        : 'hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Formatted Preview</span>
+                  </button>
                 </div>
 
-                <div>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                    Live Formatted Preview
-                  </p>
-                  <div className="h-[390px] overflow-y-auto p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 leading-relaxed whitespace-pre-line font-sans select-text">
-                    {editedText}
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[11px] font-bold">Live Synced</span>
                   </div>
+
+                  <span className="text-slate-500 font-mono text-[11px]">
+                    {editedText.trim() ? editedText.trim().split(/\s+/).length : 0} words • ~{Math.max(1, Math.ceil((editedText.trim() ? editedText.trim().split(/\s+/).length : 0) / 220))} min read
+                  </span>
                 </div>
+              </div>
+
+              {/* Workspace Content: Split, Editor-Only, or Preview-Only */}
+              <div
+                className={`grid gap-4 ${
+                  viewMode === 'split'
+                    ? 'grid-cols-1 lg:grid-cols-2'
+                    : 'grid-cols-1'
+                }`}
+              >
+                {/* Editor Pane */}
+                {(viewMode === 'split' || viewMode === 'editor') && (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileEdit className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Human-in-the-Loop Markdown Editor</span>
+                      </p>
+                      <span className="text-[10px] text-slate-500 font-mono">{editedText.length} characters</span>
+                    </div>
+
+                    {/* Markdown Quick-Action Formatting Bar */}
+                    <div className="flex flex-wrap items-center gap-1 p-1.5 bg-slate-100/90 rounded-xl border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleInlineFormatting('bold')}
+                        title="Bold (Ctrl+B, toggle)"
+                        aria-pressed={activeFormats.bold}
+                        className={fmtBtnClass(activeFormats.bold)}
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleInlineFormatting('italic')}
+                        title="Italic (Ctrl+I, toggle)"
+                        aria-pressed={activeFormats.italic}
+                        className={fmtBtnClass(activeFormats.italic)}
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="h-4 w-px bg-slate-300 mx-0.5" />
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleLineFormatting('h2')}
+                        title="Heading 2 (toggle)"
+                        aria-pressed={activeFormats.h2}
+                        className={fmtBtnClass(activeFormats.h2)}
+                      >
+                        <Heading2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleLineFormatting('h3')}
+                        title="Heading 3 (toggle)"
+                        aria-pressed={activeFormats.h3}
+                        className={fmtBtnClass(activeFormats.h3)}
+                      >
+                        <Heading3 className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="h-4 w-px bg-slate-300 mx-0.5" />
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleLineFormatting('bullet')}
+                        title="Bullet List (toggle)"
+                        aria-pressed={activeFormats.bullet}
+                        className={fmtBtnClass(activeFormats.bullet)}
+                      >
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleLineFormatting('number')}
+                        title="Numbered List (toggle)"
+                        aria-pressed={activeFormats.number}
+                        className={fmtBtnClass(activeFormats.number)}
+                      >
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={insertComplianceTable}
+                        title="Insert Compliance Matrix Table"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white text-slate-700 hover:text-slate-900 border border-transparent hover:border-slate-200 text-[11px] font-medium"
+                      >
+                        <TableIcon className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Table</span>
+                      </button>
+                      <span className="h-4 w-px bg-slate-300 mx-0.5" />
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleBadge('COMPLIED')}
+                        title="Insert Complied Badge"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold hover:bg-emerald-100 transition-colors"
+                      >
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>COMPLIED</span>
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleBadge('EXEMPTED')}
+                        title="Insert Exempted Badge"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold hover:bg-blue-100 transition-colors"
+                      >
+                        <span>EXEMPTED</span>
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => toggleLineFormatting('quote')}
+                        title="Blockquote (toggle)"
+                        aria-pressed={activeFormats.quote}
+                        className={fmtBtnClass(activeFormats.quote)}
+                      >
+                        <Quote className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={insertHorizontalRule}
+                        title="Horizontal Rule"
+                        className="p-1.5 rounded-lg hover:bg-white text-slate-700 hover:text-slate-900 border border-transparent hover:border-slate-200 transition-all"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <textarea
+                      ref={textareaRef}
+                      value={editedText}
+                      onChange={(e) => setEditedText(e.target.value)}
+                      onSelect={checkActiveFormats}
+                      onKeyUp={checkActiveFormats}
+                      onClick={checkActiveFormats}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                          e.preventDefault();
+                          toggleInlineFormatting('bold');
+                        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+                          e.preventDefault();
+                          toggleInlineFormatting('italic');
+                        }
+                      }}
+                      readOnly={isViewer}
+                      rows={22}
+                      className="w-full p-4 bg-slate-50/70 border border-slate-300 rounded-2xl text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 leading-relaxed resize-none shadow-inner transition-colors"
+                      placeholder="Type or edit proposal markdown..."
+                    />
+                  </div>
+                )}
+
+                {/* Live Formatted Preview Pane */}
+                {(viewMode === 'split' || viewMode === 'preview') && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <Eye className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Live Formatted Preview</span>
+                        </p>
+                        <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                          GFR 2017 & GeM Layout
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-[10px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setFontSize('normal')}
+                            className={`px-2 py-0.5 rounded ${
+                              fontSize === 'normal' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            A
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFontSize('large')}
+                            className={`px-2 py-0.5 rounded ${
+                              fontSize === 'large' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            A+
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowExportModal(true)}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-teal-700 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                          title="Open Fullscreen Print Package"
+                        >
+                          <Maximize2 className="w-3 h-3" />
+                          <span>Expand</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`h-[565px] overflow-y-auto p-5 bg-white border border-slate-200 rounded-2xl ${
+                        fontSize === 'large' ? 'text-sm' : 'text-xs'
+                      } text-slate-800 leading-relaxed shadow-2xs select-text`}
+                    >
+                      <MarkdownViewer content={editedText} />
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -500,9 +1216,9 @@ export default function BidStudioPage({ initialTenderId }) {
                 </div>
               </div>
 
-              {/* Bid Content */}
-              <div className="space-y-4 whitespace-pre-line text-xs font-sans text-slate-800 leading-relaxed border-t border-b border-slate-200 py-6">
-                {editedText}
+              {/* Formatted Bid Content via MarkdownViewer */}
+              <div className="border-t border-b border-slate-200 py-6 font-sans">
+                <MarkdownViewer content={editedText} />
               </div>
 
               {/* Official Seal & Signature */}

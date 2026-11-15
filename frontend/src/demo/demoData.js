@@ -4,9 +4,89 @@ export const DEMO_USER = {
   id: 'demo-user-apex-01',
   email: 'investor-demo@tenderx.in',
   full_name: 'Apex Enterprise Solutions (Demo Admin)',
+  role: 'admin',
   is_active: true,
   is_superuser: true,
 };
+
+export const DEMO_ROLES_MATRIX = {
+  roles: [
+    {
+      id: 'admin',
+      label: 'Administrator',
+      badge: 'Full Access',
+      description: 'Full access to user management, company credentials, bid generation, tender evaluation, and system configurations.',
+      permissions: [
+        'manage_users',
+        'manage_company_profile',
+        'upload_documents',
+        'delete_documents',
+        'generate_bids',
+        'edit_bids',
+        'export_packages',
+        'manage_tasks',
+      ],
+    },
+    {
+      id: 'bid_manager',
+      label: 'Bid Manager',
+      badge: 'Standard Access',
+      description: 'Evaluate tenders, upload compliance documents, synthesize proposals in Bid Studio, and manage milestones.',
+      permissions: [
+        'view_company_profile',
+        'upload_documents',
+        'generate_bids',
+        'edit_bids',
+        'export_packages',
+        'manage_tasks',
+      ],
+    },
+    {
+      id: 'viewer',
+      label: 'Auditor / Viewer',
+      badge: 'Read Only',
+      description: 'Read-only access to discover tenders, review qualification match scores, inspect credential vault, and read proposal drafts.',
+      permissions: [
+        'view_tenders',
+        'view_evaluations',
+        'view_documents',
+        'view_proposals',
+        'read_company_profile',
+        'view_tasks',
+      ],
+    },
+  ],
+};
+
+export const DEMO_USERS_LIST = [
+  {
+    id: 'demo-user-01',
+    email: 'admin@tenderx.local',
+    full_name: 'Prabal Singh (Managing Director)',
+    role: 'admin',
+    is_active: true,
+    is_superuser: true,
+    created_at: '2026-01-15T09:00:00Z',
+  },
+  {
+    id: 'demo-user-02',
+    email: 'bidmanager@tenderx.local',
+    full_name: 'Rahul Sharma (Senior Bid Manager)',
+    role: 'bid_manager',
+    is_active: true,
+    is_superuser: false,
+    created_at: '2026-02-10T11:30:00Z',
+  },
+  {
+    id: 'demo-user-03',
+    email: 'viewer@tenderx.local',
+    full_name: 'Ananya Verma (Audit & Compliance)',
+    role: 'viewer',
+    is_active: true,
+    is_superuser: false,
+    created_at: '2026-03-01T14:15:00Z',
+  },
+];
 
 export const DEMO_COMPANY_PROFILE = {
   company_name: 'Apex Enterprise Solutions Pvt Ltd',

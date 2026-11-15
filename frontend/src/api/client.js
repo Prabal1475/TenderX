@@ -10,6 +10,8 @@ import {
   DEMO_TASKS,
   DEMO_PREBAKED_COMPLIANCE_MATRIX,
   DEMO_PREBAKED_COVER_LETTER,
+  DEMO_ROLES_MATRIX,
+  DEMO_USERS_LIST,
 } from '../demo/demoData';
 import { calculateTenderMatch } from '../utils/matching';
 
@@ -30,6 +32,9 @@ export function setAuthToken(token) {
     localStorage.removeItem('tenderx_token');
   }
 }
+
+let activeDemoRole = 'admin';
+let inMemoryDemoUsers = [...DEMO_USERS_LIST];
 
 // In-memory demo drafts repository to allow creating/editing during pitch
 let inMemoryDemoDrafts = [
@@ -67,8 +72,11 @@ let inMemoryDemoDrafts = [
 let inMemoryDemoDocuments = [...DEMO_DOCUMENTS];
 
 async function request(endpoint, options = {}) {
-  // If demo mode is active, intercept before hitting network
-  if (isDemoActive()) {
+  // Never intercept auth endpoints with demo mock; auth must directly check the database
+  const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint === '/auth/register';
+
+  // If demo mode is active and not an auth call, intercept before hitting network
+  if (isDemoActive() && !isAuthEndpoint) {
     return handleDemoRequest(endpoint, options);
   }
 
@@ -99,26 +107,84 @@ async function request(endpoint, options = {}) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Request failed with status ${response.status}`);
+      const error = new Error(errorData.detail || `Request failed with status ${response.status}`);
+      error.status = response.status;
+      error.detail = errorData.detail;
+      throw error;
     }
 
     return response.json();
   } catch (err) {
-    // If backend connection fails or is offline, gracefully fall back to local demo data
-    console.warn(`Backend offline or unreachable for ${endpoint}. Serving intelligent fallback demo data.`);
-    return handleDemoRequest(endpoint, options);
+    if (isAuthEndpoint) {
+      throw err;
+    }
+    // Only fall back to local demo mock if it was a real network/offline connection failure (TypeError)
+    // NEVER mask real server responses like 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404, 500!
+    if (err instanceof TypeError) {
+      console.warn(`Backend offline or network unreachable for ${endpoint}. Serving fallback demo data.`);
+      return handleDemoRequest(endpoint, options);
+    }
+    throw err;
   }
 }
 
 function handleDemoRequest(endpoint, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
 
-  // Auth endpoints
+  // Auth & RBAC endpoints
   if (endpoint.startsWith('/auth/login') || endpoint === '/auth/register') {
-    return { access_token: 'demo-investor-token-apex', token_type: 'bearer' };
+    return {
+      access_token: 'demo-investor-token-apex',
+      token_type: 'bearer',
+      role: activeDemoRole,
+      user_id: DEMO_USER.id,
+      email: DEMO_USER.email,
+      full_name: DEMO_USER.full_name,
+    };
+  }
+  if (endpoint === '/auth/roles') {
+    return DEMO_ROLES_MATRIX;
+  }
+  if (endpoint === '/auth/users') {
+    return inMemoryDemoUsers;
+  }
+  if (endpoint.startsWith('/auth/users/') && endpoint.includes('/role')) {
+    const urlParts = endpoint.split('?');
+    const userPath = urlParts[0].split('/');
+    const targetUserId = userPath[3];
+    const query = new URLSearchParams(urlParts[1] || '');
+    const newRole = query.get('new_role') || 'bid_manager';
+    inMemoryDemoUsers = inMemoryDemoUsers.map((u) =>
+      u.id === targetUserId ? { ...u, role: newRole, is_superuser: newRole === 'admin' } : u
+    );
+    const updated = inMemoryDemoUsers.find((u) => u.id === targetUserId);
+    return updated || inMemoryDemoUsers[0];
+  }
+  if (endpoint.startsWith('/auth/switch-role')) {
+    const urlParts = endpoint.split('?');
+    const query = new URLSearchParams(urlParts[1] || '');
+    const targetRole = query.get('role_in') || 'bid_manager';
+    activeDemoRole = targetRole;
+    inMemoryDemoUsers = inMemoryDemoUsers.map((u) =>
+      u.id === DEMO_USER.id || u.email === DEMO_USER.email
+        ? { ...u, role: targetRole, is_superuser: targetRole === 'admin' }
+        : u
+    );
+    return {
+      access_token: `demo-token-${targetRole}`,
+      token_type: 'bearer',
+      role: targetRole,
+      user_id: DEMO_USER.id,
+      email: DEMO_USER.email,
+      full_name: DEMO_USER.full_name,
+    };
   }
   if (endpoint === '/auth/me') {
-    return DEMO_USER;
+    return {
+      ...DEMO_USER,
+      role: activeDemoRole,
+      is_superuser: activeDemoRole === 'admin',
+    };
   }
 
   // Company Profile
@@ -511,17 +577,43 @@ function handleDemoRequest(endpoint, options = {}) {
 
 export const api = {
   // Auth
-  login: (email, password) =>
-    request('/auth/login/json', {
+  login: async (emailOrUsername, password) => {
+    const data = await request('/auth/login/json', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
-  register: (email, password, full_name) =>
-    request('/auth/register', {
+      body: JSON.stringify({
+        email: emailOrUsername,
+        username: emailOrUsername,
+        password,
+      }),
+    });
+    // Validated directly against database; clear demo mode
+    localStorage.removeItem('tenderx_demo_mode');
+    if (data.access_token) {
+      setAuthToken(data.access_token);
+    }
+    return data;
+  },
+  register: async (email, password, full_name) => {
+    const data = await request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, full_name }),
-    }),
+    });
+    localStorage.removeItem('tenderx_demo_mode');
+    return data;
+  },
   getMe: () => request('/auth/me'),
+
+  // RBAC & Team Management
+  getRoles: () => request('/auth/roles'),
+  listUsers: () => request('/auth/users'),
+  updateUserRole: (userId, newRole) =>
+    request(`/auth/users/${userId}/role?new_role=${newRole}`, {
+      method: 'PUT',
+    }),
+  switchRole: (newRole) =>
+    request(`/auth/switch-role?role_in=${newRole}`, {
+      method: 'POST',
+    }),
 
   // Company Profile
   getCompanyProfile: () => request('/company/profile'),

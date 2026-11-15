@@ -36,3 +36,31 @@ def get_current_user(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user account")
     return user
+
+
+def require_roles(*allowed_roles: str):
+    """
+    Dependency factory to enforce Role-Based Access Control (RBAC).
+    Admin/Superusers always bypass restrictions.
+    """
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        user_role = (current_user.role or "bid_manager").lower()
+        if current_user.is_superuser or user_role == "admin":
+            return current_user
+
+        normalized_allowed = [r.lower() for r in allowed_roles]
+        if user_role not in normalized_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: role '{user_role}' lacks required permissions. Requires: {', '.join(allowed_roles)}",
+            )
+        return current_user
+
+    return role_checker
+
+
+# Convenient role shortcut dependencies
+require_admin = require_roles("admin")
+require_bid_manager = require_roles("admin", "bid_manager")
+require_viewer = require_roles("admin", "bid_manager", "viewer")
+

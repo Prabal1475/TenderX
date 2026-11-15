@@ -6,6 +6,7 @@ import {
   FileEdit,
   CalendarCheck,
   Building2,
+  Users,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { id: 'studio', label: 'Bid Studio', icon: FileEdit },
   { id: 'tasks', label: 'Tasks & Deadlines', icon: CalendarCheck },
   { id: 'profile', label: 'Company Profile', icon: Building2 },
+  { id: 'team', label: 'Team & Access', icon: Users },
 ];
 
 export default function Sidebar({ currentTab, onSelectTab }) {

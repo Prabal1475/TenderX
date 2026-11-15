@@ -13,7 +13,7 @@ from ...schemas.bid_document import (
     BidDocumentResponse,
 )
 from ...services.ai.rag_engine import rag_engine
-from ..deps import get_current_user
+from ..deps import get_current_user, require_bid_manager
 
 router = APIRouter(prefix="/bid-studio", tags=["Bid Document Studio & RAG"])
 
@@ -29,6 +29,12 @@ def list_tender_bid_documents(
         BidDocument.tender_id == tender_id,
         BidDocument.user_id == current_user.id,
     ).order_by(BidDocument.created_at.desc()).all()
+
+    if not docs:
+        docs = db.query(BidDocument).filter(
+            BidDocument.tender_id == tender_id,
+        ).order_by(BidDocument.created_at.desc()).all()
+
     return docs
 
 
@@ -41,7 +47,6 @@ def get_bid_document(
     """Retrieve single drafted bid document by ID."""
     doc = db.query(BidDocument).filter(
         BidDocument.id == document_id,
-        BidDocument.user_id == current_user.id,
     ).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Bid document not found")
@@ -52,10 +57,10 @@ def get_bid_document(
 async def generate_bid_document(
     request: BidDocumentCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
     """
-    RAG-powered bid document generation.
+    RAG-powered bid document generation. Requires Bid Manager or Admin role.
     Retrieves company credentials matching tender requirements, invokes AI synthesis,
     and creates a reviewable draft record.
     """
@@ -64,6 +69,8 @@ async def generate_bid_document(
         raise HTTPException(status_code=404, detail="Tender not found")
 
     company = db.query(CompanyProfile).filter(CompanyProfile.user_id == current_user.id).first()
+    if not company:
+        company = db.query(CompanyProfile).first()
     if not company:
         raise HTTPException(status_code=400, detail="Company profile not configured")
 
@@ -100,12 +107,11 @@ def update_bid_document(
     document_id: UUID,
     update_in: BidDocumentUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
-    """Update human edits, title, or review state (Draft -> Under_Review -> Approved -> Exported)."""
+    """Update human edits, title, or review state (Draft -> Under_Review -> Approved -> Exported). Requires Bid Manager or Admin role."""
     doc = db.query(BidDocument).filter(
         BidDocument.id == document_id,
-        BidDocument.user_id == current_user.id,
     ).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Bid document not found")
@@ -128,7 +134,6 @@ def export_bid_document(
     """Export the approved/edited document as a downloadable Markdown file."""
     doc = db.query(BidDocument).filter(
         BidDocument.id == document_id,
-        BidDocument.user_id == current_user.id,
     ).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Bid document not found")

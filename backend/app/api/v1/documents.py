@@ -17,7 +17,7 @@ from ...services.storage.file_manager import file_manager
 from ...services.storage.text_extractor import text_extractor
 from ...services.storage.document_analyzer import document_analyzer
 from ...services.ai.embeddings import embedding_service
-from ..deps import get_current_user
+from ..deps import get_current_user, require_bid_manager, require_admin
 from ...core.logging import logger
 
 router = APIRouter(prefix="/documents", tags=["Document Vault & Semantic Search"])
@@ -30,7 +30,12 @@ def list_documents(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     """List all credential documents uploaded in the company vault."""
-    query = db.query(CompanyDocument).filter(CompanyDocument.user_id == current_user.id)
+    query = db.query(CompanyDocument)
+    user_docs_count = db.query(CompanyDocument).filter(CompanyDocument.user_id == current_user.id).count()
+    if user_docs_count > 0:
+        query = query.filter(CompanyDocument.user_id == current_user.id)
+    # If this user has no individual documents, show organization's shared vault documents
+
     if category:
         query = query.filter(CompanyDocument.category == category)
 
@@ -50,7 +55,7 @@ async def upload_document(
     category: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
     """
     Upload a company credential document (PDF, DOCX, TXT),
@@ -134,13 +139,10 @@ async def upload_document(
 def analyze_existing_document(
     document_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
     """Analyze or re-analyze an existing document in the vault to generate fresh metadata, description, and type."""
-    doc = db.query(CompanyDocument).filter(
-        CompanyDocument.id == document_id,
-        CompanyDocument.user_id == current_user.id,
-    ).first()
+    doc = db.query(CompanyDocument).filter(CompanyDocument.id == document_id).first()
 
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -186,13 +188,15 @@ def semantic_search_vault(
     via pgvector cosine distance.
     """
     query_vec = embedding_service.get_embedding(search_req.query)
+    user_docs_count = db.query(CompanyDocument).filter(CompanyDocument.user_id == current_user.id).count()
 
     try:
         stmt = (
             select(DocumentChunk, CompanyDocument)
             .join(CompanyDocument, DocumentChunk.document_id == CompanyDocument.id)
-            .where(CompanyDocument.user_id == current_user.id)
         )
+        if user_docs_count > 0:
+            stmt = stmt.where(CompanyDocument.user_id == current_user.id)
         if search_req.category:
             stmt = stmt.where(CompanyDocument.category == search_req.category)
 
@@ -216,13 +220,15 @@ def semantic_search_vault(
 
     except Exception as e:
         logger.warning(f"Error in vector search: {e}. Falling back to standard query.")
-        chunks = (
+        query = (
             db.query(DocumentChunk, CompanyDocument)
             .join(CompanyDocument, DocumentChunk.document_id == CompanyDocument.id)
-            .where(CompanyDocument.user_id == current_user.id)
-            .limit(search_req.top_k)
-            .all()
         )
+        if user_docs_count > 0:
+            query = query.filter(CompanyDocument.user_id == current_user.id)
+        if search_req.category:
+            query = query.filter(CompanyDocument.category == search_req.category)
+        chunks = query.limit(search_req.top_k).all()
         return [
             SemanticSearchResult(
                 chunk_id=c.id,
@@ -241,13 +247,10 @@ def semantic_search_vault(
 def delete_document(
     document_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> Any:
-    """Delete a credential document and all its indexed embedding chunks."""
-    doc = db.query(CompanyDocument).filter(
-        CompanyDocument.id == document_id,
-        CompanyDocument.user_id == current_user.id,
-    ).first()
+    """Admin-only: Delete a credential document and all its indexed embedding chunks."""
+    doc = db.query(CompanyDocument).filter(CompanyDocument.id == document_id).first()
 
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")

@@ -71,7 +71,7 @@ export default function TenderDiscoveryPage({ onSelectTender, onOpenStudio }) {
 
   const handleIngest = async (source) => {
     setSyncing(true);
-    const promise = api.ingestTenders(source, true).then(fetchTenders);
+    const promise = api.ingestTenders(source, false).then(fetchTenders);
     toast.promise(promise, {
       loading: `Ingesting ${source} tender feeds...`,
       success: `${source} tenders indexed and available!`,

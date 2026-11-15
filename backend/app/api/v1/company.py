@@ -6,7 +6,7 @@ from ...models.user import User
 from ...models.company import CompanyProfile
 from ...schemas.company import CompanyProfileResponse, CompanyProfileUpdate
 from ...services.ai.embeddings import embedding_service
-from ..deps import get_current_user
+from ..deps import get_current_user, require_bid_manager
 
 router = APIRouter(prefix="/company", tags=["Company Profile"])
 
@@ -16,9 +16,13 @@ def get_company_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
-    """Retrieve the company qualification profile for the current user."""
+    """Retrieve the company qualification profile for the current user's organization."""
     profile = db.query(CompanyProfile).filter(CompanyProfile.user_id == current_user.id).first()
     if not profile:
+        # Fallback to shared primary company profile in the organization
+        primary = db.query(CompanyProfile).first()
+        if primary:
+            return primary
         profile = CompanyProfile(
             user_id=current_user.id,
             company_name="Enterprise Solutions",
@@ -34,10 +38,12 @@ def get_company_profile(
 def update_company_profile(
     profile_in: CompanyProfileUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_bid_manager),
 ) -> Any:
-    """Update company qualification metrics, turnover, certifications, and re-compute semantic embedding."""
+    """Update company qualification metrics, turnover, certifications, and re-compute semantic embedding. Requires Bid Manager or Admin role."""
     profile = db.query(CompanyProfile).filter(CompanyProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = db.query(CompanyProfile).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Company profile not found")
 

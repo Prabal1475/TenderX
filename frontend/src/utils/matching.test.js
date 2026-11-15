@@ -1,4 +1,5 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
 import { calculateTenderMatch } from "./matching.js";
 
 describe("Tender Matching Engine - Frontend Tests", () => {
@@ -11,20 +12,20 @@ describe("Tender Matching Engine - Frontend Tests", () => {
 
   test("handles null or empty tender safely", () => {
     const res = calculateTenderMatch(null, mockCompany);
-    expect(res.overall_match_score).toBe(50);
-    expect(res.is_hard_eligible).toBe(false);
+    assert.equal(res.overall_match_score, 50);
+    assert.equal(res.is_hard_eligible, false);
   });
 
   test("returns predefined high match for GEM railway CCTV tender", () => {
     const res = calculateTenderMatch({ id: "gem-railway-cctv-01" }, mockCompany);
-    expect(res.overall_match_score).toBe(94);
-    expect(res.is_hard_eligible).toBe(true);
+    assert.equal(res.overall_match_score, 94);
+    assert.equal(res.is_hard_eligible, true);
   });
 
   test("returns predefined low match for CPPP NHAI FASTag tender", () => {
     const res = calculateTenderMatch({ id: "cppp-nhai-fastag-02" }, mockCompany);
-    expect(res.overall_match_score).toBe(42);
-    expect(res.is_hard_eligible).toBe(false);
+    assert.equal(res.overall_match_score, 42);
+    assert.equal(res.is_hard_eligible, false);
   });
 
   test("preserves existing pre-evaluated match score from backend", () => {
@@ -34,8 +35,8 @@ describe("Tender Matching Engine - Frontend Tests", () => {
       is_hard_eligible: true,
     };
     const res = calculateTenderMatch(tender, mockCompany);
-    expect(res.overall_match_score).toBe(88);
-    expect(res.is_hard_eligible).toBe(true);
+    assert.equal(res.overall_match_score, 88);
+    assert.equal(res.is_hard_eligible, true);
   });
 
   test("calculates eligible score for qualified tender without MSME relaxation", () => {
@@ -48,8 +49,8 @@ describe("Tender Matching Engine - Frontend Tests", () => {
       msme_exemption: false,
     };
     const res = calculateTenderMatch(tender, mockCompany);
-    expect(res.is_hard_eligible).toBe(true);
-    expect(res.overall_match_score).toBeGreaterThanOrEqual(80);
+    assert.equal(res.is_hard_eligible, true);
+    assert.ok(res.overall_match_score >= 80);
   });
 
   test("applies MSME turnover relaxation under Indian Public Procurement rules (GFR)", () => {
@@ -62,8 +63,8 @@ describe("Tender Matching Engine - Frontend Tests", () => {
       msme_exemption: true, // 50% relaxation -> 5.0 Cr required
     };
     const res = calculateTenderMatch(highTurnoverTender, mockCompany);
-    expect(res.is_hard_eligible).toBe(true);
-    expect(res.overall_match_score).toBe(76);
+    assert.equal(res.is_hard_eligible, true);
+    assert.equal(res.overall_match_score, 76);
   });
 
   test("flags hard ineligible when company turnover is below even MSME relaxation limit", () => {
@@ -76,7 +77,7 @@ describe("Tender Matching Engine - Frontend Tests", () => {
       msme_exemption: true,
     };
     const res = calculateTenderMatch(impossibleTender, mockCompany);
-    expect(res.is_hard_eligible).toBe(false);
-    expect(res.overall_match_score).toBeLessThan(60);
+    assert.equal(res.is_hard_eligible, false);
+    assert.ok(res.overall_match_score < 60);
   });
 });

@@ -11,6 +11,7 @@ import DocumentVaultPage from './pages/DocumentVaultPage';
 import BidStudioPage from './pages/BidStudioPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import TaskTrackerPage from './pages/TaskTrackerPage';
+import TeamAccessPage from './pages/TeamAccessPage';
 import { getAuthToken, setAuthToken, api } from './api/client';
 import { useDemo } from './demo/DemoContext';
 
@@ -131,12 +132,14 @@ export default function App() {
             {activeTab === 'vault' && <DocumentVaultPage />}
 
             {activeTab === 'studio' && (
-              <BidStudioPage initialTenderId={selectedTenderId} />
+              <BidStudioPage initialTenderId={selectedTenderId} user={currentUser} />
             )}
 
             {activeTab === 'tasks' && <TaskTrackerPage />}
 
             {activeTab === 'profile' && <CompanyProfilePage />}
+
+            {activeTab === 'team' && <TeamAccessPage user={currentUser} />}
           </div>
         </main>
       </div>

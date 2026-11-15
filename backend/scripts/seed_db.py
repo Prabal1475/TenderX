@@ -39,12 +39,55 @@ def seed_database():
                 full_name=settings.FIRST_SUPERUSER_NAME,
                 is_active=True,
                 is_superuser=True,
+                role="admin",
             )
             db.add(admin_user)
             db.commit()
             db.refresh(admin_user)
         else:
+            admin_user.role = "admin"
+            db.commit()
             logger.info(f"Superuser {admin_email} already exists.")
+
+        # 1b. Seed Bid Manager User
+        manager_email = "bidmanager@tenderx.local"
+        manager_user = db.query(User).filter(User.email == manager_email).first()
+        if not manager_user:
+            logger.info(f"Creating default bid manager: {manager_email}")
+            manager_user = User(
+                email=manager_email,
+                hashed_password=get_password_hash("BidManager123!"),
+                full_name="Rahul Sharma (Bid Manager)",
+                is_active=True,
+                is_superuser=False,
+                role="bid_manager",
+            )
+            db.add(manager_user)
+            db.commit()
+        else:
+            manager_user.hashed_password = get_password_hash("BidManager123!")
+            manager_user.role = "bid_manager"
+            db.commit()
+
+        # 1c. Seed Viewer User
+        viewer_email = "viewer@tenderx.local"
+        viewer_user = db.query(User).filter(User.email == viewer_email).first()
+        if not viewer_user:
+            logger.info(f"Creating default auditor/viewer: {viewer_email}")
+            viewer_user = User(
+                email=viewer_email,
+                hashed_password=get_password_hash("Viewer123!"),
+                full_name="Ananya Verma (Audit Viewer)",
+                is_active=True,
+                is_superuser=False,
+                role="viewer",
+            )
+            db.add(viewer_user)
+            db.commit()
+        else:
+            viewer_user.hashed_password = get_password_hash("Viewer123!")
+            viewer_user.role = "viewer"
+            db.commit()
 
         # 2. Seed Company Profile
         profile = db.query(CompanyProfile).filter(CompanyProfile.user_id == admin_user.id).first()
